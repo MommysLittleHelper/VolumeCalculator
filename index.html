@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Умный Калькулятор Объема</title>
+    <link rel="icon" type="image/png" href="logo.png">
+    <style>
+        :root {
+            --primary: #24318a;
+            --primary-hover: #3142bd;
+            --bg: #f0f4f9;
+            --card-bg: #ffffff;
+            --text: #0f172a;
+            --border: #cbd5e1;
+            --textarea-bg: #fafafa;
+        }
+
+        [data-theme="dark"] {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f8fafc;
+            --border: #334155;
+            --textarea-bg: #111827;
+            --primary: #3b82f6;
+            --primary-hover: #60a5fa;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, sans-serif;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--card-bg);
+            padding: 28px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px -5px rgba(36, 49, 138, 0.1);
+            position: relative;
+        }
+
+        .header-actions {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+        }
+
+        .theme-btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 6px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        h1 {
+            font-size: 22px;
+            margin-bottom: 6px;
+            text-align: center;
+            color: var(--primary);
+            padding-right: 40px;
+        }
+
+        p.subtitle {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        textarea {
+            width: 100%;
+            height: 180px;
+            padding: 14px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 15px;
+            background-color: var(--textarea-bg);
+            color: var(--text);
+            outline: none;
+            resize: vertical;
+        }
+
+        textarea:focus {
+            border-color: var(--primary);
+        }
+
+        button.calc-btn {
+            width: 100%;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 16px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            margin-top: 16px;
+        }
+
+        button.calc-btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .results-box {
+            border-top: 2px dashed var(--border);
+            padding-top: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .totals {
+            background: rgba(36, 49, 138, 0.06);
+            padding: 18px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--primary);
+        }
+
+        [data-theme="dark"] .totals {
+            background: rgba(59, 130, 246, 0.1);
+            border-left-color: #3b82f6;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .total-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .total-row strong {
+            font-size: 20px;
+            color: var(--primary);
+        }
+
+        .details-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #64748b;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .detail-item {
+            font-size: 14px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .unit-badge {
+            font-size: 11px;
+            padding: 2px 6px;
+            background: #e2e8f0;
+            color: #475569;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .error-item {
+            color: #ef4444;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-actions">
+        <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+    </div>
+
+    <h1>📦 Умный Калькулятор Объема</h1>
+    <p class="subtitle">Автоанализ величин без привязки к буквам</p>
+    
+    <textarea id="inputText" placeholder="Вставьте любой текст с габаритами..."></textarea>
+    
+    <button class="calc-btn" onclick="calculateVolume()">Рассчитать объем</button>
+    
+    <div id="resultsBox" class="results-box">
+        <div class="totals">
+            <div class="total-row">
+                <span>🚚 Общий объем:</span>
+                <span id="totalVolume"><strong>0.000</strong> м³</span>
+            </div>
+            <div class="total-row">
+                <span>🔢 Всего мест:</span>
+                <span id="totalPieces" style="font-weight: 600;">0 шт.</span>
+            </div>
+        </div>
+        
+        <div class="details-title">Детализация авторасчета:</div>
+        <div id="detailsList"></div>
+    </div>
+</div>
+
+<script>
+function toggleTheme() {
+    var body = document.documentElement;
+    if (body.getAttribute('data-theme') === 'dark') {
+        body.removeAttribute('data-theme');
+        document.getElementById('themeBtn').innerText = '🌙';
+    } else {
+        body.setAttribute('data-theme', 'dark');
+        document.getElementById('themeBtn').innerText = '☀️';
+    }
+}
+
+function calculateVolume() {
+    var rawText = document.getElementById('inputText').value.trim();
+    var resultsBox = document.getElementById('resultsBox');
+    var detailsList = document.getElementById('detailsList');
+    
+    if (!rawText) {
+        alert("Пожалуйста, вставьте текст.");
+        return;
+    }
+    
+    var cleanDotsText = rawText.replace(/(?<=[а-яa-zа-яё])\./gi, '');
+    var cleanText = cleanDotsText.replace(/(\d+),(\d+)/g, '$1.$2');
+    var lines = cleanText.split('\n');
+    
+    var totalVolume = 0;
+    var totalPieces = 0;
+    var detailsHtml = '';
+    
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].trim();
+        if (!line) continue;
+        
+        var numbers = line.match(/\d+(\.\d+)?/g);
+        
+        if (numbers && numbers.length >= 4) {
+            var rev = numbers.reverse();
+            
+            var quantity = parseFloat(rev.shift());
+            var height = parseFloat(rev.shift());
+            var width = parseFloat(rev.shift());
+            var length = parseFloat(rev.shift());
+            
+            var pureProduct = length * width * height;
+            
+            var lineUnit = 'см';
+            var finalItemVolume = 0;
+            
+            var volAsMeters = pureProduct;             
+            var volAsCm = pureProduct / 1000000;       
+            var volAsMm = pureProduct / 1000000000;    
+            
+            // 🔥 ЖЕСТКИЙ ФИЛЬТР АДЕКВАТНОСТИ (макс 4.0 м³ на одну коробку/паллету)
+            if (volAsMeters >= 0.001 && volAsMeters <= 4.0) {
+                lineUnit = 'м';
+                finalItemVolume = volAsMeters * quantity;
+            } else if (volAsCm >= 0.001 && volAsCm <= 4.0) {
+                lineUnit = 'см';
+                finalItemVolume = volAsCm * quantity;
+            } else {
+                lineUnit = 'мм';
+                finalItemVolume = volAsMm * quantity;
+                if (finalItemVolume < 0.00001 && volAsCm < 0.001) {
+                    lineUnit = 'см';
+                    finalItemVolume = volAsCm * quantity;
+                }
+            }
+            
+            totalVolume += finalItemVolume;
+            totalPieces += quantity;
+            
+            detailsHtml += '<div class="detail-item"><span>Строка ' + (i + 1) + ': ' + length + 'x' + width + 'x' + height + ' <span class="unit-badge">' + lineUnit + '</span> × ' + quantity + ' шт.</span><span style="font-weight:600; color:var(--primary);">' + (finalItemVolume / quantity).toFixed(3) + ' м³ / шт</span></div>';
+        } else {
+            detailsHtml += '<div class="detail-item error-item"><span>Строка ' + (i + 1) + ': ⚠️ Мало чисел</span><span>—</span></div>';
+        }
+    }
+    
+    document.getElementById('totalVolume').innerHTML = '<strong>' + totalVolume.toFixed(3) + '</strong> м³';
+    document.getElementById('totalPieces').innerText = totalPieces + ' шт.';
+    detailsList.innerHTML = detailsHtml;
+    resultsBox.style.display = 'block';
+}
+</script>
+</body>
+</html>
