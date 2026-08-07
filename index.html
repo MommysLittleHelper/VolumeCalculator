@@ -5,11 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Логистический калькулятор</title>
     <link rel="stylesheet" href="style.css">
+    <!-- ПЕРЕНЕСЛИ СЮДА И ДОБАВИЛИ DEFER -->
+    <script src="script.js" defer></script> 
 </head>
 <body>
 
 <div class="container">
-    <!-- Переключатель тем -->
     <div class="theme-switch">
         <button id="theme-light">☀️ Светлая</button>
         <button id="theme-dark">🌙 Тёмная</button>
@@ -30,7 +31,6 @@
         
         <button class="copy-btn" id="copyBtn">📋 Скопировать отчет</button>
         
-        <!-- Блок массового изменения (добавлен правильный класс bulk-unit-btn) -->
         <div id="bulkActions" class="bulk-box" style="display:none;">
             <span>Применить ко всем строкам:</span>
             <div class="badge-group">
@@ -45,6 +45,5 @@
     </div>
 </div>
 
-<script src="script.js"></script>
 </body>
 </html>
