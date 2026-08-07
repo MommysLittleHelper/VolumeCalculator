@@ -1,7 +1,7 @@
 var parsedItems = [];
 var textReportGlobal = '';
 
-// --- УПРАВЛЕНИЕ ТЕМАМИ ОФОРМЛЕНИЯ ---
+// --- 1. УПРАВЛЕНИЕ ТЕМАМИ ОФОРМЛЕНИЯ ---
 function setTheme(theme) {
     var buttons = document.querySelectorAll('.theme-switch button');
     for (var i = 0; i < buttons.length; i++) {
@@ -27,7 +27,7 @@ function handleSystemThemeChange() {
 }
 window.matchMedia('(prefers-color-scheme: dark)').addListener(handleSystemThemeChange);
 
-// ФУНКЦИЯ ПОЛНОЙ ОЧИСТКИ (Добавлена)
+// ФУНКЦИЯ ПОЛНОЙ ОЧИСТКИ
 function clearAll() {
     document.getElementById('inputText').value = '';
     document.getElementById('resultBox').style.display = 'none';
@@ -36,7 +36,7 @@ function clearAll() {
     document.getElementById('inputText').focus();
 }
 
-// --- ВЫЧИСЛЕНИЯ И ЛОГИКА ДИАПАЗОНОВ ГРУЗОВ ---
+// --- 2. УМНЫЙ ВСЕЯДНЫЙ ПОИСК ВЕЛИЧИН С УЧЕТОМ ТЕКСТОВЫХ ПОДСКАЗОК ---
 function calculate() {
     var rawText = document.getElementById('inputText').value;
     if (!rawText.trim()) return alert("Введите текст");
@@ -51,19 +51,14 @@ function calculate() {
     while ((match = blockRegex.exec(normalizedText)) !== null) {
         var startPos = match.index;
         var endPos = blockRegex.lastIndex;
+        var blockText = match[0].toLowerCase();
         
         var l = parseFloat(match[1]);
         var w = parseFloat(match[2]);
         var h = parseFloat(match[3]);
-        
-        if (normalizedText[startPos - 1] === '.' || normalizedText[endPos] === '.') {
-            continue;
-        }
-
-        var substringAfter = normalizedText.substring(endPos, endPos + 35).toLowerCase();
-        var fullBlockText = match[0].toLowerCase() + substringAfter;
-        
         var quantity = 1;
+        
+        var substringAfter = normalizedText.substring(endPos, endPos + 35).toLowerCase();
         var qMatch = substringAfter.match(/(\d+(?:\.\d+)?)\s*(?:количество|кол-во|мест|шт|q)/) || 
                      substringAfter.match(/(?:количество|кол-во|мест|шт|q)\s*[:=-]?\s*(\d+(?:\.\d+)?)/);
                      
@@ -76,6 +71,11 @@ function calculate() {
             }
         }
 
+        if (normalizedText[startPos - 1] === '.' || normalizedText[endPos] === '.') {
+            continue;
+        }
+
+        var fullBlockText = match[0].toLowerCase() + substringAfter;
         var unit = 'см', isDoubtful = false, msg = '', sum = l + w + h, max = Math.max(l,w,h), min = Math.min(l,w,h);
         
         if (/(?:^|[^а-яa-z])(мм|mm)(?:[^а-яa-z]|$)/.test(fullBlockText)) unit = 'мм';
@@ -107,9 +107,9 @@ function calculate() {
     }
     document.getElementById('bulkActions').style.display = parsedItems.filter(function(x){return x.isValid;}).length > 1 ? 'flex' : 'none';
     renderResults();
-}
+} // <-- Эта скобка закрывает функцию calculate() и чинит кнопку очистки!
 
-// --- ОТРИСОВКА РЕЗУЛЬТАТОВ НА ЭКРАН И ГЕНЕРАЦИЯ ОТЧЕТА ---
+// --- 3. ОТРИСОВКА РЕЗУЛЬТАТОВ НА ЭКРАН И ГЕНЕРАЦИЯ ОТЧЕТА ---
 function renderResults() {
     var totalVolume = 0, totalPieces = 0, detailsHtml = '', textReport = '📊 ОТЧЕТ ПО РАСЧЕТУ ОБЪЕМА:\n\n';
     
@@ -154,7 +154,7 @@ function highlightTextRange(start, end) {
     }, 0);
 }
 
-// --- ГЛАВНАЯ ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ ---
+// --- 4. ГЛАВНАЯ ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ ---
 document.addEventListener('DOMContentLoaded', function() {
     var mainTextarea = document.getElementById('inputText');
     if (mainTextarea) mainTextarea.focus();
@@ -173,8 +173,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Подвязка новой кнопки очистки к функции clearAll
-    document.getElementById('clearBtn').addEventListener('click', clearAll);
+    // Надежная привязка кнопки очистки
+    var clearButton = document.getElementById('clearBtn');
+    if (clearButton) {
+        clearButton.addEventListener('click', clearAll);
+    }
 
     document.getElementById('bulkActions').addEventListener('click', function(e) {
         var btn = e.target.closest('.bulk-unit-btn');
