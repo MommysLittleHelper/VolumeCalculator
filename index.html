@@ -2,32 +2,85 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Логистический калькулятор</title>
     <style>
-        body { font-family: sans-serif; max-width: 550px; margin: 40px auto; padding: 20px; background: #f0f4f9; }
-        textarea { width: 100%; height: 120px; margin-bottom: 10px; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 14px; }
-        button { width: 100%; padding: 12px; background: #24318a; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 15px; }
-        .result { margin-top: 20px; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .details-title { margin-top: 15px; font-size: 13px; font-weight: bold; color: #555; border-top: 1px solid #eee; padding-top: 10px; }
-        .detail-line { font-size: 13px; padding: 8px; border-bottom: 1px dashed #eee; color: #333; margin-bottom: 4px; border-radius: 4px; }
-        .badge { background: #e2e8f0; padding: 2px 5px; border-radius: 4px; font-size: 11px; font-weight: bold; }
-        .warning-line { background-color: #fffbeb; border-left: 4px solid #d97706; }
-        .warning-text { font-size: 11px; color: #b45309; margin-top: 4px; font-weight: bold; }
+        /* Переменные для Светлой темы (по умолчанию) */
+        :root {
+            --bg: #f0f4f9;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #cbd5e1;
+            --textarea-bg: #fafafa;
+            --primary: #24318a;
+            --primary-hover: #3142bd;
+            --badge-bg: #e2e8f0;
+            --badge-text: #475569;
+            --warning-bg: #fffbeb;
+            --warning-border: #d97706;
+            --warning-text: #b45309;
+        }
+
+        /* Автоматическое переключение на Тёмную тему, если она включена в системе */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #090d16;
+                --card-bg: #131c2e;
+                --text-main: #f8fafc;
+                --text-muted: #94a3b8;
+                --border: #334155;
+                --textarea-bg: #1e293b;
+                --primary: #3b82f6;
+                --primary-hover: #60a5fa;
+                --badge-bg: #334155;
+                --badge-text: #cbd5e1;
+                --warning-bg: #2d2010;
+                --warning-border: #b45309;
+                --warning-text: #f59e0b;
+            }
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; transition: background-color 0.3s ease, color 0.3s ease; }
+        body { background-color: var(--bg); color: var(--text-main); padding: 20px; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; }
+        .container { width: 100%; max-width: 550px; background: var(--card-bg); padding: 28px; border-radius: 20px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2); }
+        h1 { font-size: 22px; margin-bottom: 6px; text-align: center; color: var(--primary); }
+        p.subtitle { font-size: 14px; color: var(--text-muted); margin-bottom: 20px; text-align: center; }
+        textarea { width: 100%; height: 120px; padding: 14px; border: 2px solid var(--border); border-radius: 12px; font-size: 15px; background-color: var(--textarea-bg); color: var(--text-main); outline: none; resize: vertical; }
+        textarea:focus { border-color: var(--primary); }
+        button.calc-btn { width: 100%; background-color: var(--primary); color: white; border: none; padding: 14px; font-size: 16px; font-weight: 600; border-radius: 12px; cursor: pointer; margin-top: 16px; transition: background-color 0.2s; }
+        button.calc-btn:hover { background-color: var(--primary-hover); }
+        .result { border-top: 2px dashed var(--border); padding-top: 20px; margin-top: 20px; }
+        .totals-box { background: rgba(59, 130, 246, 0.08); padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid var(--primary); }
+        .totals-box p { display: flex; justify-content: space-between; font-size: 15px; margin-bottom: 8px; }
+        .totals-box p:last-child { margin-bottom: 0; }
+        .totals-box strong { font-size: 18px; color: var(--primary); }
+        .details-title { margin-top: 15px; font-size: 13px; font-weight: bold; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; padding-bottom: 8px; }
+        .detail-line { font-size: 13px; padding: 10px; border-bottom: 1px dashed var(--border); color: var(--text-main); margin-bottom: 6px; border-radius: 8px; background: rgba(255,255,255,0.02); }
+        .badge { background: var(--badge-bg); color: var(--badge-text); padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-left: 4px; }
+        .warning-line { background-color: var(--warning-bg); border-left: 4px solid var(--warning-border); }
+        .warning-text { font-size: 11px; color: var(--warning-text); margin-top: 5px; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <h3>📦 Логистический калькулятор (Интеллектуальный автовыбор)</h3>
-    <textarea id="inputText" placeholder="Вставьте строки сюда...&#10;Пример: 6*5*4&#10;Или: 150 x 150.4 x 150.99"></textarea>
-    <button onclick="calculate()">Рассчитать объем</button>
+<div class="container">
+    <h1>📦 Логистический калькулятор</h1>
+    <p class="subtitle">Умный автовыбор единиц измерения сторон</p>
+    
+    <textarea id="inputText" placeholder="Вставьте строки сюда...&#10;Пример: 6*5*4&#10;Или: 1500 x 500 x 1000"></textarea>
+    <button class="calc-btn" onclick="calculate()">Рассчитать объем</button>
 
     <div id="resultBox" class="result" style="display:none;">
-        <p><strong>🚚 Общий объем:</strong> <span id="totalVolume">0</span> м³</p>
-        <p><strong>🔢 Всего мест:</strong> <span id="totalPieces">0</span> шт.</p>
+        <div class="totals-box">
+            <p><span>🚚 Общий объем:</span> <span id="totalVolume"><strong>0.0000</strong> м³</span></p>
+            <p><span>🔢 Всего мест:</span> <span id="totalPieces" style="font-weight:600;">0 шт.</span></p>
+        </div>
         
         <div class="details-title">🔍 Построчный разбор текста:</div>
         <div id="detailsList"></div>
     </div>
+</div>
 
 <script>
 function calculate() {
@@ -74,14 +127,12 @@ function calculate() {
             } else if (reM.test(line)) {
                 unit = 'м'; divider = 1;
             } else {
-                // ИНТЕЛЛЕКТУАЛЬНЫЙ АНАЛИЗ ГРУЗОВЫХ ПАРАМЕТРОВ
                 var sum = l + w + h;
                 var maxSide = Math.max(l, w, h);
                 var minSide = Math.min(l, w, h);
                 
                 if (sum <= 30) {
                     if (maxSide > 5) {
-                        // Кейс: 6*5*4 -> одна из сторон больше 5м
                         unit = 'см'; divider = 1000000;
                         isDoubtful = true;
                         doubtMessage = '⚠️ Расчет в см, но проверьте — возможно это метры?';
@@ -93,15 +144,11 @@ function calculate() {
                     isDoubtful = true;
                     doubtMessage = '⚠️ Расчет в см, но проверьте — возможно это мм?';
                 } else if (sum >= 301 && sum <= 3000) {
-                    // Анализируем структуру чисел внутри диапазона 301-3000
                     if (maxSide >= 1000 && minSide >= 100) {
-                        // Кейс: 1500 x 500 x 1000 -> Точно миллиметры, без предупреждений
                         unit = 'мм'; divider = 1000000000;
                     } else if (minSide <= 25) {
-                        // Кейс: 150 x 15 x 150 -> Минимальная сторона слишком мала для ММ (1.5 см). Это явно СМ.
                         unit = 'см'; divider = 1000000;
                     } else if (l > 100 && w > 100 && h > 100) {
-                        // Кейс: 150 x 150.4 x 150.99 -> Все стороны крупные. Это СМ.
                         unit = 'см'; divider = 1000000;
                         isDoubtful = true;
                         doubtMessage = '⚠️ Расчет в см, но проверьте — возможно это мм?';
@@ -131,12 +178,12 @@ function calculate() {
                 
             detailsHtml += '</div>';
         } else {
-            detailsHtml += '<div class="detail-line" style="color: red;">Строка ' + (i + 1) + ': ❌ Не удалось распознать 3 габарита</div>';
+            detailsHtml += '<div class="detail-line" style="color: #ef4444; border-left: 4px solid #ef4444;">Строка ' + (i + 1) + ': ❌ Не удалось распознать 3 габарита</div>';
         }
     }
     
-    document.getElementById('totalVolume').innerText = totalVolume.toFixed(4);
-    document.getElementById('totalPieces').innerText = totalPieces;
+    document.getElementById('totalVolume').innerHTML = '<strong>' + totalVolume.toFixed(4) + '</strong> м³';
+    document.getElementById('totalPieces').innerText = totalPieces + ' шт.';
     document.getElementById('detailsList').innerHTML = detailsHtml;
     document.getElementById('resultBox').style.display = 'block';
 }
