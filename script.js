@@ -1,79 +1,49 @@
 var parsedItems = [];
 var textReportGlobal = '';
 
-// --- 1. ИНИЦИАЛИЗАЦИЯ И НАСТРОЙКА КНОПОК ПРИ ЗАГРУЗКЕ ОКНА ---
-document.addEventListener('DOMContentLoaded', function() {
-    var mainTextarea = document.getElementById('inputText');
-    if (mainTextarea) mainTextarea.focus();
-
-    var theme = localStorage.getItem('user-theme') || 'system';
-    var isDark = theme === 'system' ? window.matchMedia('(prefers-color-scheme: dark)').matches : theme === 'dark';
-    document.documentElement.className = isDark ? 'dark' : 'light';
-    if (document.getElementById('theme-' + theme)) {
-        document.getElementById('theme-' + theme).classList.add('active');
+// --- УПРАВЛЕНИЕ ТЕМАМИ ОФОРМЛЕНИЯ ---
+function setTheme(theme) {
+    var buttons = document.querySelectorAll('.theme-switch button');
+    for (var i = 0; i < buttons.length; i++) {
+        buttons[i].classList.remove('active');
     }
+    
+    var activeBtn = document.getElementById('theme-' + theme);
+    if (activeBtn) activeBtn.classList.add('active');
+    localStorage.setItem('user-theme', theme);
+    
+    var isDark = false;
+    if (theme === 'system') {
+        isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    } else {
+        isDark = (theme === 'dark');
+    }
+    
+    document.documentElement.className = isDark ? 'dark' : 'light';
+}
 
-    document.querySelector('.theme-switch').addEventListener('click', function(e) {
-        var btn = e.target.closest('button');
-        if (!btn) return;
-        localStorage.setItem('user-theme', btn.id.replace('theme-', ''));
-        location.reload(); 
-    });
+function handleSystemThemeChange() {
+    if (localStorage.getItem('user-theme') === 'system') setTheme('system');
+}
+window.matchMedia('(prefers-color-scheme: dark)').addListener(handleSystemThemeChange);
 
-    document.getElementById('calcBtn').addEventListener('click', calculate);
+// ФУНКЦИЯ ПОЛНОЙ ОЧИСТКИ (Добавлена)
+function clearAll() {
+    document.getElementById('inputText').value = '';
+    document.getElementById('resultBox').style.display = 'none';
+    parsedItems = [];
+    textReportGlobal = '';
+    document.getElementById('inputText').focus();
+}
 
-    document.getElementById('copyBtn').addEventListener('click', function() {
-        if (!textReportGlobal) return;
-        navigator.clipboard.writeText(textReportGlobal);
-        var btn = document.getElementById('copyBtn');
-        btn.innerText = '✅ Отчет скопирован!';
-        setTimeout(function() { btn.innerText = '📋 Скопировать отчет'; }, 2000);
-    });
-
-    document.getElementById('resultBox').addEventListener('click', function(e) {
-        var btn = e.target.closest('.btn-badge');
-        if (!btn) return;
-        var u = btn.getAttribute('data-unit');
-        var idx = btn.getAttribute('data-i');
-
-        if (btn.classList.contains('bulk-unit-btn')) {
-            parsedItems.forEach(function(x) { if(x.isValid) { x.unit = u; x.isDoubtful = false; } });
-        } else if (idx !== null) {
-            parsedItems[parseInt(idx)].unit = u;
-            parsedItems[parseInt(idx)].isDoubtful = false;
-        }
-        renderResults();
-    });
-
-    document.getElementById('detailsList').addEventListener('mouseenter', function(e) {
-        var line = e.target.closest('.detail-line');
-        if (!line) return;
-        var start = parseInt(line.getAttribute('data-start'));
-        var end = parseInt(line.getAttribute('data-end'));
-        if (!isNaN(start) && !isNaN(end)) highlightTextRange(start, end);
-    }, true);
-
-    window.addEventListener('keydown', function(e) {
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
-            var textarea = document.getElementById('inputText');
-            if (document.activeElement !== textarea) {
-                textarea.focus();
-                setTimeout(function() { calculate(); }, 10);
-            }
-        }
-    });
-});
-
-// --- 2. УМНЫЙ ВСЕЯДНЫЙ ПОИСК ВЕЛИЧИН (СТРОГИЙ ЛОГИСТИЧЕСКИЙ РАЗБОР) ---
+// --- ВЫЧИСЛЕНИЯ И ЛОГИКА ДИАПАЗОНОВ ГРУЗОВ ---
 function calculate() {
     var rawText = document.getElementById('inputText').value;
     if (!rawText.trim()) return alert("Введите текст");
     
-    // Заменяем запятые в дробях на точки
     var normalizedText = rawText.replace(/(\d+),(\d+)/g, '$1.$2');
     parsedItems = [];
     
-    // Шаблон ищет три числа, разделенные типичными знаками: *, x, х (рус), /, мм, см, м или пробелами
     var blockRegex = /(\d+(?:\.\d+)?)\s*(?:\*|x|х|\/|мм|см|м|mm|cm|m|\s)\s*(\d+(?:\.\d+)?)\s*(?:\*|x|х|\/|мм|см|м|mm|cm|m|\s)\s*(\d+(?:\.\d+)?)/g;
     var match;
     var itemIndex = 1;
@@ -86,13 +56,10 @@ function calculate() {
         var w = parseFloat(match[2]);
         var h = parseFloat(match[3]);
         
-        // Отсекаем ложные срабатывания на датах (например, 06.08.2026 превращалось в 06, 08, 2026)
-        // Если перед или после найденного блока стоят точки, это дата, пропускаем её
         if (normalizedText[startPos - 1] === '.' || normalizedText[endPos] === '.') {
             continue;
         }
 
-        // Берем контекст вокруг найденных чисел (35 символов после), чтобы найти количество мест и единицы измерения
         var substringAfter = normalizedText.substring(endPos, endPos + 35).toLowerCase();
         var fullBlockText = match[0].toLowerCase() + substringAfter;
         
@@ -103,7 +70,6 @@ function calculate() {
         if (qMatch) {
             quantity = parseFloat(qMatch[1]);
         } else {
-            // Если ключевых слов нет, ищем просто отдельно стоящее число после габаритов
             var nextNumMatch = substringAfter.match(/(?:^|[^.\d])(\d+(?:\.\d+)?)(?:[^.\d]|$)/);
             if (nextNumMatch) {
                 quantity = parseFloat(nextNumMatch[1]);
@@ -112,7 +78,6 @@ function calculate() {
 
         var unit = 'см', isDoubtful = false, msg = '', sum = l + w + h, max = Math.max(l,w,h), min = Math.min(l,w,h);
         
-        // Проверяем единицы измерения
         if (/(?:^|[^а-яa-z])(мм|mm)(?:[^а-яa-z]|$)/.test(fullBlockText)) unit = 'мм';
         else if (/(?:^|[^а-яa-z])(см|cm)(?:[^а-яa-z]|$)/.test(fullBlockText)) unit = 'см';
         else if (/(?:^|[^а-яa-z])(м|m)(?:[^а-яa-z]|$)/.test(fullBlockText)) unit = 'м';
@@ -132,27 +97,19 @@ function calculate() {
         }
 
         parsedItems.push({
-            id: itemIndex++,
-            start: startPos,
-            end: endPos,
-            isValid: true,
-            l: l, w: w, h: h,
-            quantity: quantity,
-            unit: unit,
-            isDoubtful: isDoubtful,
-            msg: msg
+            id: itemIndex++, start: startPos, end: endPos, isValid: true,
+            l: l, w: w, h: h, quantity: quantity, unit: unit, isDoubtful: isDoubtful, msg: msg
         });
     }
 
     if (parsedItems.length === 0) {
         parsedItems.push({ id: 1, isValid: false, start: 0, end: rawText.length });
     }
-
     document.getElementById('bulkActions').style.display = parsedItems.filter(function(x){return x.isValid;}).length > 1 ? 'flex' : 'none';
     renderResults();
 }
 
-// --- 3. ОТРИСОВКА РЕЗУЛЬТАТОВ И СИСТЕМА ВЫДЕЛЕНИЯ ФРАГМЕНТОВ ---
+// --- ОТРИСОВКА РЕЗУЛЬТАТОВ НА ЭКРАН И ГЕНЕРАЦИЯ ОТЧЕТА ---
 function renderResults() {
     var totalVolume = 0, totalPieces = 0, detailsHtml = '', textReport = '📊 ОТЧЕТ ПО РАСЧЕТУ ОБЪЕМА:\n\n';
     
@@ -196,3 +153,73 @@ function highlightTextRange(start, end) {
         textarea.setSelectionRange(start, end);
     }, 0);
 }
+
+// --- ГЛАВНАЯ ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ ---
+document.addEventListener('DOMContentLoaded', function() {
+    var mainTextarea = document.getElementById('inputText');
+    if (mainTextarea) mainTextarea.focus();
+
+    setTheme(localStorage.getItem('user-theme') || 'system');
+    
+    document.getElementById('theme-light').addEventListener('click', function() { setTheme('light'); });
+    document.getElementById('theme-dark').addEventListener('click', function() { setTheme('dark'); });
+    document.getElementById('theme-system').addEventListener('click', function() { setTheme('system'); });
+    document.getElementById('calcBtn').addEventListener('click', calculate);
+    
+    document.getElementById('copyBtn').addEventListener('click', function() {
+        navigator.clipboard.writeText(textReportGlobal).then(function() {
+            document.getElementById('copyBtn').innerText = '✅ Отчет скопирован!';
+            setTimeout(function() { document.getElementById('copyBtn').innerText = '📋 Скопировать отчет'; }, 2000);
+        });
+    });
+    
+    // Подвязка новой кнопки очистки к функции clearAll
+    document.getElementById('clearBtn').addEventListener('click', clearAll);
+
+    document.getElementById('bulkActions').addEventListener('click', function(e) {
+        var btn = e.target.closest('.bulk-unit-btn');
+        if (!btn) return;
+        var targetUnit = btn.getAttribute('data-unit');
+        for (var k = 0; k < parsedItems.length; k++) {
+            if (parsedItems[k].isValid) {
+                parsedItems[k].unit = targetUnit;
+                parsedItems[k].isDoubtful = false;
+            }
+        }
+        renderResults();
+    });
+
+    document.getElementById('detailsList').addEventListener('mouseenter', function(e) {
+        var line = e.target.closest('.detail-line');
+        if (!line) return;
+        var start = parseInt(line.getAttribute('data-start'));
+        var end = parseInt(line.getAttribute('data-end'));
+        if (!isNaN(start) && !isNaN(end)) highlightTextRange(start, end);
+    }, true);
+
+    document.getElementById('detailsList').addEventListener('click', function(e) {
+        var btn = e.target.closest('.btn-badge');
+        if (!btn) return;
+        var i = parseInt(btn.getAttribute('data-i'));
+        var u = btn.getAttribute('data-u');
+        parsedItems[i].unit = u;
+        parsedItems[i].isDoubtful = false;
+        renderResults();
+    });
+
+    window.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
+            var textarea = document.getElementById('inputText');
+            if (document.activeElement !== textarea) {
+                e.preventDefault();
+                navigator.clipboard.readText().then(function(text) {
+                    if (text) {
+                        textarea.value = text;
+                        calculate();
+                        textarea.focus();
+                    }
+                });
+            }
+        }
+    });
+});
