@@ -50,5 +50,28 @@
     <a href="cargo-extension-v1.1.zip" download style="display: inline-block; padding: 10px 16px; background: rgba(59, 130, 246, 0.1); color: var(--primary); border: 1px solid var(--primary); border-radius: 10px; font-size: 13px; font-weight: 600; text-decoration: none; transition: all 0.2s;">💾 Скачать расширение для Chrome (.ZIP)</a>
 </div>
 
+    <!-- Кнопка скачивания расширения, закрепленная в правом нижнем углу экрана -->
+<a href="cargo-extension-v1.1.zip" download style="
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    background-color: var(--primary);
+    color: #ffffff; /* Белый текст */
+    border: 1px solid var(--border);
+    border-radius: 50px; /* Круглая аккуратная форма */
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s, transform 0.1s;
+" onmouseover="this.style.backgroundColor='var(--primary-hover)'" onmouseout="this.style.backgroundColor='var(--primary)'" onmousedown="this.style.transform='scale(0.98)'" onmouseup="this.style.transform='scale(1)'">
+    💾 Скачать расширение (.ZIP)
+</a>
+
 </body>
 </html>
