@@ -60,11 +60,13 @@ function calculate() {
 
         var lowerLine = trimmedLine.toLowerCase();
         
+        // ИСПРАВЛЕНО: Полное удаление знаков №1, №2, № 3 вместе с их цифрами
+        lowerLine = lowerLine.replace(/№\s*\d+/g, ' ');
+        
         // Защита от дат (07.08.2026)
         lowerLine = lowerLine.replace(/\d{2}\.\d{2}\.\d{4}/g, ' ');
         
-        // ИСПРАВЛЕНО: Защита от артикулов. Удаляет слэш, только если после него идет БУКВА (551/a).
-        // Если идет число (13/100), слэш игнорируется, сохраняя количество мест!
+        // Защита от артикулов (992-X или 551/a)
         lowerLine = lowerLine.replace(/\d+-[a-z0-9]+/g, ' ');
         lowerLine = lowerLine.replace(/\d+\/[a-z][a-z0-9]*/g, ' ');
 
