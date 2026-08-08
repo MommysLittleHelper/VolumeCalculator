@@ -36,70 +36,96 @@ function clearAll() {
     document.getElementById('inputText').focus();
 }
 
-// --- 2. УМНЫЙ ВСЕЯДНЫЙ ПОИСК ВЕЛИЧИН С УЧЕТОМ ТЕКСТОВЫХ ПОДСКАЗОК ---
+// --- 2. ПОСТРОЧНЫЙ УМНЫЙ ПОИСК ВЕЛИЧИН (ЗАЩИТА ОТ СКЛЕИВАНИЯ СТРОК) ---
 function calculate() {
     var rawText = document.getElementById('inputText').value;
     if (!rawText.trim()) return alert("Введите текст");
     
+    // Заменяем запятые в дробях на точки
     var normalizedText = rawText.replace(/(\d+),(\d+)/g, '$1.$2');
+    var lines = normalizedText.split('\n');
     parsedItems = [];
     
-    var blockRegex = /(\d+(?:\.\d+)?)\s*(?:\*|x|х|\/|мм|см|м|mm|cm|m|\s)\s*(\d+(?:\.\d+)?)\s*(?:\*|x|х|\/|мм|см|м|mm|cm|m|\s)\s*(\d+(?:\.\d+)?)/g;
-    var match;
     var itemIndex = 1;
+    var startPosAccumulator = 0;
 
-    while ((match = blockRegex.exec(normalizedText)) !== null) {
-        var startPos = match.index;
-        var endPos = blockRegex.lastIndex;
-        var blockText = match[0].toLowerCase();
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        var trimmedLine = line.trim();
+        var lineLength = line.length + 1; // +1 для учета символа переноса строки \n
         
-        var l = parseFloat(match[1]);
-        var w = parseFloat(match[2]);
-        var h = parseFloat(match[3]);
-        var quantity = 1;
-        
-        var substringAfter = normalizedText.substring(endPos, endPos + 35).toLowerCase();
-        var qMatch = substringAfter.match(/(\d+(?:\.\d+)?)\s*(?:количество|кол-во|мест|шт|q)/) || 
-                     substringAfter.match(/(?:количество|кол-во|мест|шт|q)\s*[:=-]?\s*(\d+(?:\.\d+)?)/);
-                     
-        if (qMatch) {
-            quantity = parseFloat(qMatch[1]);
-        } else {
-            var nextNumMatch = substringAfter.match(/(?:^|[^.\d])(\d+(?:\.\d+)?)(?:[^.\d]|$)/);
-            if (nextNumMatch) {
-                quantity = parseFloat(nextNumMatch[1]);
-            }
-        }
-
-        if (normalizedText[startPos - 1] === '.' || normalizedText[endPos] === '.') {
+        if (!trimmedLine) {
+            startPosAccumulator += lineLength;
             continue;
         }
 
-        var fullBlockText = match[0].toLowerCase() + substringAfter;
-        var unit = 'см', isDoubtful = false, msg = '', sum = l + w + h, max = Math.max(l,w,h), min = Math.min(l,w,h);
+        var lowerLine = trimmedLine.toLowerCase();
         
-        if (/(?:^|[^а-яa-z])(мм|mm)(?:[^а-яa-z]|$)/.test(fullBlockText)) unit = 'мм';
-        else if (/(?:^|[^а-яa-z])(см|cm)(?:[^а-яa-z]|$)/.test(fullBlockText)) unit = 'см';
-        else if (/(?:^|[^а-яa-z])(м|m)(?:[^а-яa-z]|$)/.test(fullBlockText)) unit = 'м';
-        else {
-            if (sum <= 30) { 
-                if (max > 5) { unit = 'см'; isDoubtful = true; msg = '⚠️ Расчет в см, но проверьте — возможно это метры?'; } else unit = 'м'; 
-            }
-            else if (sum <= 300) { unit = 'см'; isDoubtful = true; msg = '⚠️ Расчет в см, но проверьте — возможно это мм?'; }
-            else if (sum <= 3000) {
-                if (max >= 1000 && min >= 100) unit = 'мм';
-                else if (min <= 25 || (l > 100 && w > 100 && h > 100)) { 
-                    unit = 'см'; 
-                    if(min > 25) { isDoubtful = true; msg = '⚠️ Расчет в см, но проверьте — возможно это мм?'; } 
-                }
-                else { unit = 'мм'; isDoubtful = true; msg = '⚠️ Расчет в мм, но проверьте — возможно это см?'; }
-            } else unit = 'мм';
-        }
+        // Отсекаем ложные срабатывания на датах (если в строке есть дата типа 07.08.2026, очищаем её)
+        lowerLine = lowerLine.replace(/\d{2}\.\d{2}\.\d{4}/g, ' ');
+        // Отсекаем номера накладных и артикулы, написанные через дефис (например, 992-X или 2026/08-11)
+        lowerLine = lowerLine.replace(/\d+[-/][a-z0-9]+/g, ' ');
 
-        parsedItems.push({
-            id: itemIndex++, start: startPos, end: endPos, isValid: true,
-            l: l, w: w, h: h, quantity: quantity, unit: unit, isDoubtful: isDoubtful, msg: msg
-        });
+        // Ищем все числа внутри ЭТОЙ конкретной строки
+        var numbers = lowerLine.match(/\d+(\.\d+)?/g);
+
+        if (numbers && numbers.length >= 3) {
+            var quantity = 1;
+            var hasQ = false;
+
+            // Ищем явное указание количества (шт, мест) в этой строке
+            var qMatch = lowerLine.match(/(\d+(?:\.\d+)?)\s*(?:количество|кол-во|мест|шт|q)/) || 
+                         lowerLine.match(/(?:количество|кол-во|мест|шт|q)\s*[:=-]?\s*(\d+(?:\.\d+)?)/);
+                         
+            if (qMatch) {
+                quantity = parseFloat(qMatch[1]);
+                hasQ = true;
+            }
+
+            // Извлекаем первые 3 числа для габаритов
+            var l = parseFloat(numbers[0]);
+            var w = parseFloat(numbers[1]);
+            var h = parseFloat(numbers[2]);
+
+            // Если в строке нашлось 4-е число и количество не было задано текстом
+            if (numbers.length >= 4 && !hasQ) {
+                quantity = parseFloat(numbers[3]);
+            }
+
+            var unit = 'см', isDoubtful = false, msg = '', sum = l + w + h, max = Math.max(l,w,h), min = Math.min(l,w,h);
+            
+            // Проверяем единицы измерения в строке
+            if (/(?:^|[^а-яa-z])(мм|mm)(?:[^а-яa-z]|$)/.test(lowerLine)) unit = 'мм';
+            else if (/(?:^|[^а-яa-z])(см|cm)(?:[^а-яa-z]|$)/.test(lowerLine)) unit = 'см';
+            else if (/(?:^|[^а-яa-z])(м|m)(?:[^а-яa-z]|$)/.test(lowerLine)) unit = 'м';
+            else {
+                if (sum <= 30) { 
+                    if (max > 5) { unit = 'см'; isDoubtful = true; msg = '⚠️ Расчет в см, но проверьте — возможно это метры?'; } else unit = 'м'; 
+                }
+                else if (sum <= 300) { unit = 'см'; isDoubtful = true; msg = '⚠️ Расчет в см, но проверьте — возможно это мм?'; }
+                else if (sum <= 3000) {
+                    if (max >= 1000 && min >= 100) unit = 'мм';
+                    else if (min <= 25 || (l > 100 && w > 100 && h > 100)) { 
+                        unit = 'см'; 
+                        if(min > 25) { isDoubtful = true; msg = '⚠️ Расчет в см, но проверьте — возможно это мм?'; } 
+                    }
+                    else { unit = 'мм'; isDoubtful = true; msg = '⚠️ Расчет в мм, но проверьте — возможно это см?'; }
+                } else unit = 'мм';
+            }
+
+            parsedItems.push({
+                id: itemIndex++,
+                start: startPosAccumulator,
+                end: startPosAccumulator + line.length,
+                isValid: true,
+                l: l, w: w, h: h,
+                quantity: quantity,
+                unit: unit,
+                isDoubtful: isDoubtful,
+                msg: msg
+            });
+        }
+        startPosAccumulator += lineLength;
     }
 
     if (parsedItems.length === 0) {
@@ -107,7 +133,7 @@ function calculate() {
     }
     document.getElementById('bulkActions').style.display = parsedItems.filter(function(x){return x.isValid;}).length > 1 ? 'flex' : 'none';
     renderResults();
-} // <-- Эта скобка закрывает функцию calculate() и чинит кнопку очистки!
+}
 
 // --- 3. ОТРИСОВКА РЕЗУЛЬТАТОВ НА ЭКРАН И ГЕНЕРАЦИЯ ОТЧЕТА ---
 function renderResults() {
@@ -120,15 +146,21 @@ function renderResults() {
             var vol = (item.l * item.w * item.h * item.quantity) / div;
             totalVolume += vol; totalPieces += item.quantity;
             
-            detailsHtml += '<div class="detail-line ' + (item.isDoubtful ? 'warning-line' : '') + '" data-start="' + item.start + '" data-end="' + item.end + '">' +
+            var warnClass = item.isDoubtful ? 'warning-line' : '';
+            var mAct = item.unit === 'м' ? 'active' : '';
+            var cmAct = item.unit === 'см' ? 'active' : '';
+            var mmAct = item.unit === 'мм' ? 'active' : '';
+            
+            detailsHtml += '<div class="detail-line ' + warnClass + '" data-start="' + item.start + '" data-end="' + item.end + '">' +
                 'Позиция ' + item.id + ': ' + item.l + 'x' + item.w + 'x' + item.h + ' ' +
                 '<div class="badge-group">' +
-                    '<button class="btn-badge ' + (item.unit==='м'?'active':'') + '" data-i="' + i + '" data-unit="м">м</button>' +
-                    '<button class="btn-badge ' + (item.unit==='см'?'active':'') + '" data-i="' + i + '" data-unit="см">см</button>' +
-                    '<button class="btn-badge ' + (item.unit==='мм'?'active':'') + '" data-i="' + i + '" data-unit="мм">мм</button>' +
+                    '<button class="btn-badge ' + mAct + '" data-i="' + i + '" data-unit="м">м</button>' +
+                    '<button class="btn-badge ' + cmAct + '" data-i="' + i + '" data-unit="см">см</button>' +
+                    '<button class="btn-badge ' + mmAct + '" data-i="' + i + '" data-unit="мм">мм</button>' +
                 '</div> × ' + item.quantity + ' шт. = <strong>' + vol.toFixed(4) + '</strong> м³' +
                 (item.isDoubtful ? '<div class="warning-text">' + item.msg + '</div>' : '') +
             '</div>';
+            
             textReport += '• Позиция ' + item.id + ': ' + item.l + 'x' + item.w + 'x' + item.h + ' ' + item.unit + ' × ' + item.quantity + ' шт. = ' + vol.toFixed(4) + ' м³\n' + (item.isDoubtful ? '  ' + item.msg + '\n' : '');
         } else {
             detailsHtml += '<div class="detail-line" style="color:#ef4444; border-left:4px solid #ef4444;">❌ В тексте не найдено подходящих групп из 3 или 4 чисел.</div>';
@@ -173,7 +205,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Надежная привязка кнопки очистки
     var clearButton = document.getElementById('clearBtn');
     if (clearButton) {
         clearButton.addEventListener('click', clearAll);
