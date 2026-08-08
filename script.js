@@ -89,16 +89,17 @@ function calculate() {
             var w = parseFloat(numbers[1]);
             var h = parseFloat(numbers[2]);
 
-            // Если в строке нашлось 4-е число (неважно, через пробел или через слэш /100)
+            // Если в строке нашлось 4-е число
             if (numbers.length >= 4 && !hasQ) {
                 quantity = parseFloat(numbers[3]);
             }
 
             var unit = 'см', isDoubtful = false, msg = '', sum = l + w + h, max = Math.max(l,w,h), min = Math.min(l,w,h);
             
+            // ИСПРАВЛЕНО: Теперь код понимает не только одиночную "м", но и слова "метры", "метров", "метр"
             if (/(?:^|[^а-яa-z])(мм|mm)(?:[^а-яa-z]|$)/.test(lowerLine)) unit = 'мм';
             else if (/(?:^|[^а-яa-z])(см|cm)(?:[^а-яa-z]|$)/.test(lowerLine)) unit = 'см';
-            else if (/(?:^|[^а-яa-z])(м|m)(?:[^а-яa-z]|$)/.test(lowerLine)) unit = 'м';
+            else if (/(?:^|[^а-яa-z])(м|m|метр|meter)/.test(lowerLine)) unit = 'м';
             else {
                 if (sum <= 30) { 
                     if (max > 5) { unit = 'см'; isDoubtful = true; msg = '⚠️ Расчет в см, но проверьте — возможно это метры?'; } else unit = 'м'; 
