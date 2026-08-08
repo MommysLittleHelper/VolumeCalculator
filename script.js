@@ -60,14 +60,16 @@ function calculate() {
 
         var lowerLine = trimmedLine.toLowerCase();
         
-        // Защита от дат и сложных артикулов, чтобы они не перебивали габариты
+        // Защита от дат (07.08.2026)
         lowerLine = lowerLine.replace(/\d{2}\.\d{2}\.\d{4}/g, ' ');
-        lowerLine = lowerLine.replace(/\d+[-/][a-z0-9]+/g, ' ');
+        
+        // ИСПРАВЛЕНО: Защита от артикулов. Удаляет слэш, только если после него идет БУКВА (551/a).
+        // Если идет число (13/100), слэш игнорируется, сохраняя количество мест!
+        lowerLine = lowerLine.replace(/\d+-[a-z0-9]+/g, ' ');
+        lowerLine = lowerLine.replace(/\d+\/[a-z][a-z0-9]*/g, ' ');
 
-        // ИСПРАВЛЕНО: Теперь ищем вообще любые идущие подряд числа в строке, 
-        // разделители (*, /, х, пробелы) больше не имеют значения
+        // Ищем все числа внутри ЭТОЙ конкретной строки
         var numbers = lowerLine.match(/\d+(\.\d+)?/g);
-
         if (numbers && numbers.length >= 3) {
             var quantity = 1;
             var hasQ = false;
@@ -77,7 +79,7 @@ function calculate() {
                          lowerLine.match(/(?:количество|кол-во|мест|шт|q)\s*[:=-]?\s*(\d+(?:\.\d+)?)/);
                          
             if (qMatch) {
-                quantity = parseFloat(qMatch[1]);
+                quantity = parseFloat(qMatch);
                 hasQ = true;
             }
 
@@ -85,7 +87,7 @@ function calculate() {
             var w = parseFloat(numbers[1]);
             var h = parseFloat(numbers[2]);
 
-            // Если в строке нашлось 4-е число (неважно, после пробела или после слэша /)
+            // Если в строке нашлось 4-е число (неважно, через пробел или через слэш /100)
             if (numbers.length >= 4 && !hasQ) {
                 quantity = parseFloat(numbers[3]);
             }
@@ -128,10 +130,10 @@ function calculate() {
     if (parsedItems.length === 0) {
         parsedItems.push({ id: 1, isValid: false, start: 0, end: rawText.length });
     }
+
     document.getElementById('bulkActions').style.display = parsedItems.filter(function(x){return x.isValid;}).length > 1 ? 'flex' : 'none';
     renderResults();
 }
-
 // --- 3. ОТРИСОВКА РЕЗУЛЬТАТОВ НА ЭКРАН И ГЕНЕРАЦИЯ ОТЧЕТА ---
 function renderResults() {
     var totalVolume = 0, totalPieces = 0, detailsHtml = '', textReport = '📊 ОТЧЕТ ПО РАСЧЕТУ ОБЪЕМА:\n\n';
@@ -183,7 +185,6 @@ function highlightTextRange(start, end) {
     }, 0);
 }
 
-// --- 4. ГЛАВНАЯ ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ ---
 document.addEventListener('DOMContentLoaded', function() {
     var mainTextarea = document.getElementById('inputText');
     if (mainTextarea) mainTextarea.focus();
