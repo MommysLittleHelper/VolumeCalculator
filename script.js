@@ -91,18 +91,19 @@ function calculate() {
                     hasQ = true;
                 }
             }
-            // ИСПРАВЛЕНО: Индексы прописаны словами, чтобы разметка сайта их не стёрла
-            var l = parseFloat(numbers[0]);
-            var w = parseFloat(numbers[1]);
-            var h = parseFloat(numbers[2]);
+            // ИСПРАВЛЕНО: Безопасный метод извлечения чисел без использования квадратных скобок
+            var l = parseFloat(numbers.at(0));
+            var w = parseFloat(numbers.at(1));
+            var h = parseFloat(numbers.at(2));
 
             // Если количество не нашли текстом, но в строке осталось лишнее 4-е число
             if (numbers.length >= 4 && !hasQ) {
-                var parsedQ4 = parseFloat(numbers[3]);
+                var parsedQ4 = parseFloat(numbers.at(3));
                 if (!isNaN(parsedQ4)) {
                     quantity = parsedQ4;
                 }
             }
+
 
             var unit = 'см';
             var isDoubtful = false;
