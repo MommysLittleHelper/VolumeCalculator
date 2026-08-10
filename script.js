@@ -140,8 +140,8 @@ function renderResults() {
     for (var i = 0; i < parsedItems.length; i++) {
         var item = parsedItems[i];
         if (item.isValid) {
-            var div = item.unit === 'мм' ? 1000000000 : (item.unit === 'м' ? 1 : 1000000);
-            var vol = (item.l * item.w * item.h * item.quantity) / div;
+var div = item.unit === 'мм' ? 1000000000 : (item.unit === 'м' ? 1 : 1000000);
+var vol = (item.l * item.w * item.h * item.quantity) / div;
             totalVolume += vol; 
             totalPieces += item.quantity;
             
