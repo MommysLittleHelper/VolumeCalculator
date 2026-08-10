@@ -1,74 +1,39 @@
-// =========================================================================
-// ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ХРАНЕНИЯ ДАННЫХ
-// =========================================================================
 var parsedItems = [];
 var textReportGlobal = '';
 
-// =========================================================================
-// 1. УПРАВЛЕНИЕ ТЕМАМИ ОФОРМЛЕНИЯ
-// =========================================================================
 function setTheme(theme) {
     var buttons = document.querySelectorAll('.theme-switch button');
-    for (var i = 0; i < buttons.length; i++) {
-        buttons[i].classList.remove('active');
-    }
-    
+    for (var i = 0; i < buttons.length; i++) { buttons[i].classList.remove('active'); }
     var activeBtn = document.getElementById('theme-' + theme);
     if (activeBtn) activeBtn.classList.add('active');
     localStorage.setItem('user-theme', theme);
-    
-    var isDark = false;
-    if (theme === 'system') {
-        isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    } else {
-        isDark = (theme === 'dark');
-    }
-    
+    var isDark = theme === 'system' ? window.matchMedia('(prefers-color-scheme: dark)').matches : (theme === 'dark');
     document.documentElement.className = isDark ? 'dark' : 'light';
 }
 
-function handleSystemThemeChange() {
-    if (localStorage.getItem('user-theme') === 'system') setTheme('system');
-}
+function handleSystemThemeChange() { if (localStorage.getItem('user-theme') === 'system') setTheme('system'); }
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', handleSystemThemeChange);
 
 function clearAll() {
     var inputText = document.getElementById('inputText');
-    var resultBox = document.getElementById('resultBox');
     if (inputText) inputText.value = '';
-    if (resultBox) resultBox.style.display = 'none';
-    parsedItems = [];
-    textReportGlobal = '';
+    document.getElementById('resultBox').style.display = 'none';
+    parsedItems = []; textReportGlobal = '';
     if (inputText) inputText.focus();
 }
 
-// =========================================================================
-// 2. ПОСТРОЧНЫЙ УМНЫЙ ПОИСК ВЕЛИЧИН (АБСОЛЮТНАЯ ВСЕЯДНОСТЬ)
-// =========================================================================
 function calculate() {
     var rawText = document.getElementById('inputText').value;
     if (!rawText.trim()) return alert("Введите текст");
-    
     var normalizedText = rawText.replace(/(\d+),(\d+)/g, '$1.$2');
     var lines = normalizedText.split('\n');
-    parsedItems = [];
-    
-    var itemIndex = 1;
-    var startPosAccumulator = 0;
+    parsedItems = []; var itemIndex = 1; var startPosAccumulator = 0;
 
     for (var i = 0; i < lines.length; i++) {
-        var line = lines[i];
-        var trimmedLine = line.trim();
-        var lineLength = line.length + 1; 
-        
-        if (!trimmedLine) {
-            startPosAccumulator += lineLength;
-            continue;
-        }
-
+        var line = lines[i]; var trimmedLine = line.trim(); var lineLength = line.length + 1;
+        if (!trimmedLine) { startPosAccumulator += lineLength; continue; }
         var lowerLine = trimmedLine.toLowerCase();
         
-        // Очистка маркеров позиций (с флагом "i" и поддержкой всех видов тире)
         lowerLine = lowerLine.replace(/(?:позиция|поз|строка|груз|коробка|короб|ящик|паллет)\s*\d+\s*[:.\-——–]?/gi, ' ');
         lowerLine = lowerLine.replace(/№\s*\d+/g, ' ');
         lowerLine = lowerLine.replace(/\d{2}\.\d{2}\.\d{4}/g, ' ');
@@ -77,35 +42,23 @@ function calculate() {
 
         var numbers = lowerLine.match(/\d+(\.\d+)?/g);
         if (numbers && numbers.length >= 3) {
-            var quantity = 1;
-            var hasQ = false;
-
+            var quantity = 1; var hasQ = false;
             var qMatch = lowerLine.match(/(\d+(?:\.\d+)?)\s*(?:количество|кол-во|мест|шт|штук|штуки|q)/) || 
                          lowerLine.match(/(?:количество|кол-во|мест|шт|штук|штуки|q)\s*[:=\-——–]?\s*(\d+(?:\.\d+)?)/);
-                         
             if (qMatch) {
-                var matchedValue = qMatch[1] || qMatch[2];
-                var parsedQ = parseFloat(matchedValue);
-                if (!isNaN(parsedQ)) {
-                    quantity = parsedQ;
-                    hasQ = true;
-                }
+                var parsedQ = parseFloat(qMatch[1] || qMatch[2]);
+                if (!isNaN(parsedQ)) { quantity = parsedQ; hasQ = true; }
             }
-            // ИСПРАВЛЕНО: Безопасное извлечение габаритов без индексов и скобок
+
+            // БЕЗОПАСНО: Вытаскиваем габариты методом .shift() без использования ломающихся скобок
             var l = parseFloat(numbers.shift());
             var w = parseFloat(numbers.shift());
             var h = parseFloat(numbers.shift());
 
-            // Если количество не нашли текстом, но в строке осталось 4-е число
             if (numbers.length > 0 && !hasQ) {
                 var parsedQ4 = parseFloat(numbers.shift());
-                if (!isNaN(parsedQ4)) {
-                    quantity = parsedQ4;
-                }
+                if (!isNaN(parsedQ4)) { quantity = parsedQ4; }
             }
-
-
-
             var unit = 'см';
             var isDoubtful = false;
             var msg = '';
@@ -113,7 +66,6 @@ function calculate() {
             var max = Math.max(l, w, h);
             var min = Math.min(l, w, h);
             
-            // Проверка явного указания единиц измерения в тексте строки
             if (/(?:^|[^а-яa-z])(мм|mm)(?:[^а-яa-z]|$)/.test(lowerLine)) {
                 unit = 'мм';
             } else if (/(?:^|[^а-яa-z])(см|cm)(?:[^а-яa-z]|$)/.test(lowerLine)) {
@@ -121,7 +73,6 @@ function calculate() {
             } else if (/(?:^|[^а-яa-z])(м|m|метр|метров|метра|meter)(?:[^а-яa-z]|$)/.test(lowerLine)) {
                 unit = 'м';
             } else {
-                // Ваша эвристика автоматического определения, если единицы не указаны явно
                 if (sum <= 30) { 
                     if (max > 5) { 
                         unit = 'см'; 
