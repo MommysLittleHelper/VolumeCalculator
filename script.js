@@ -104,12 +104,12 @@ var qMatch = lowerLine.match(/(\d+(?:\.\d+)?)\s*(?:количество|кол-�
                     hasQ = true;
                 }
             }
-            // Четкая фиксация первых трех элементов массива как габаритов
+            // ИСПРАВЛЕНО: Четко берем 1-е, 2-е и 3-е числа из массива габаритов
             var l = parseFloat(numbers[0]);
             var w = parseFloat(numbers[1]);
             var h = parseFloat(numbers[2]);
 
-            // Если количество не нашли текстом, но в строке осталось лишнее 4-е число
+            // Если количество не нашли текстом, но в строке есть 4-е число — берем строго 4-й элемент массива
             if (numbers.length >= 4 && !hasQ) {
                 var parsedQ4 = parseFloat(numbers[3]);
                 if (!isNaN(parsedQ4)) {
