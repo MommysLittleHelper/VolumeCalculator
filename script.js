@@ -1,8 +1,12 @@
-// --- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ХРАНЕНИЯ ДАННЫХ ---
+// =========================================================================
+// ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ХРАНЕНИЯ ДАННЫХ
+// =========================================================================
 var parsedItems = [];
 var textReportGlobal = '';
 
-// --- 1. УПРАВЛЕНИЕ ТЕМАМИ ОФОРМЛЕНИЯ ---
+// =========================================================================
+// 1. УПРАВЛЕНИЕ ТЕМАМИ ОФОРМЛЕНИЯ
+// =========================================================================
 function setTheme(theme) {
     var buttons = document.querySelectorAll('.theme-switch button');
     for (var i = 0; i < buttons.length; i++) {
@@ -41,7 +45,9 @@ function clearAll() {
     if (inputText) inputText.focus();
 }
 
-// --- 2. ПОСТРОЧНЫЙ УМНЫЙ ПОИСК ВЕЛИЧИН (АБСОЛЮТНАЯ ВСЕЯДНОСТЬ) ---
+// =========================================================================
+// 2. ПОСТРОЧНЫЙ УМНЫЙ ПОИСК ВЕЛИЧИН (АБСОЛЮТНАЯ ВСЕЯДНОСТЬ)
+// =========================================================================
 function calculate() {
     var rawText = document.getElementById('inputText').value;
     if (!rawText.trim()) return alert("Введите текст");
@@ -66,15 +72,14 @@ function calculate() {
 
         var lowerLine = trimmedLine.toLowerCase();
         
-        // ИСПРАВЛЕНО: Глобальное удаление знаков № вместе с их цифрами
+        // Полное удаление знаков № вместе с их цифрами
         lowerLine = lowerLine.replace(/№\s*\d+/g, ' ');
         
         // Защита от дат (07.08.2026)
         lowerLine = lowerLine.replace(/\d{2}\.\d{2}\.\d{4}/g, ' ');
         
-        // Защита от артикулов (992-X или 551/a)
-        lowerLine = lowerLine.replace(/\d+-[a-z0-9]+/g, ' ');
-        // ИСПРАВЛЕНО: Добавлен глобальный флаг /g для косой черты
+        // Защита от артикулов (ищет обязательные буквы после дефиса, не ломая запись 80-120-160)
+        lowerLine = lowerLine.replace(/\d+-[a-z][a-z0-9]*/g, ' ');
         lowerLine = lowerLine.replace(/\d+\/[a-z][a-z0-9]*/g, ' ');
 
         // Ищем все числа внутри ЭТОЙ конкретной строки
@@ -83,17 +88,20 @@ function calculate() {
             var quantity = 1;
             var hasQ = false;
 
-            // ИСПРАВЛЕНО: Поиск текстовых подсказок количества мест (извлечение группы)
-            var qMatch = lowerLine.match(/(\d+(?:\.\d+)?)\s*(?:количество|кол-во|мест|шт|q)/) || 
-                         lowerLine.match(/(?:количество|кол-во|мест|шт|q)\s*[:=-]?\s*(\d+(?:\.\d+)?)/);
+            // УЛУЧШЕНО: Поиск маркеров количества (поддержка дефисов, знаков "=" и слова "штук")
+            var qMatch = lowerLine.match(/(\d+(?:\.\d+)?)\s*(?:количество|кол-во|мест|шт|штук|штуки|q)/) || 
+                         lowerLine.match(/(?:количество|кол-во|мест|шт|штук|штуки|q)\s*[:=\-]?\s*(\d+(?:\.\d+)?)/);
                          
             if (qMatch) {
-                var parsedQ = parseFloat(qMatch[1]);
+                // Извлекаем именно ту подгруппу из скобок, которая сработала (первую или вторую)
+                var matchedValue = qMatch[1] || qMatch[2];
+                var parsedQ = parseFloat(matchedValue);
                 if (!isNaN(parsedQ)) {
                     quantity = parsedQ;
                     hasQ = true;
                 }
             }
+            // ИСПРАВЛЕНО: Четкая фиксация первых трех элементов массива как габаритов
             var l = parseFloat(numbers[0]);
             var w = parseFloat(numbers[1]);
             var h = parseFloat(numbers[2]);
@@ -113,7 +121,7 @@ function calculate() {
             var max = Math.max(l, w, h);
             var min = Math.min(l, w, h);
             
-            // ИСПРАВЛЕНО: Безопасные границы слов для метров, чтобы избежать ложных срабатываний (на "миллиметр" или бренды)
+            // ИСПРАВЛЕНО: Безопасные границы слов для метров, чтобы избежать ложных срабатываний
             if (/(?:^|[^а-яa-z])(мм|mm)(?:[^а-яa-z]|$)/.test(lowerLine)) {
                 unit = 'мм';
             } else if (/(?:^|[^а-яa-z])(см|cm)(?:[^а-яa-z]|$)/.test(lowerLine)) {
@@ -184,7 +192,9 @@ function calculate() {
     
     renderResults();
 }
-// --- 3. ОТРИСОВКА РЕЗУЛЬТАТОВ НА ЭКРАН И ГЕНЕРАЦИЯ ОТЧЕТА ---
+// =========================================================================
+// 3. ОТРИСОВКА РЕЗУЛЬТАТОВ НА ЭКРАН И ГЕНЕРАЦИЯ ОТЧЕТА
+// =========================================================================
 function renderResults() {
     var totalVolume = 0, totalPieces = 0, detailsHtml = '', textReport = '📊 ОТЧЕТ ПО РАСЧЕТУ ОБЪЕМА:\n\n';
     
@@ -236,7 +246,9 @@ function highlightTextRange(start, end) {
     }, 0);
 }
 
-// --- 4. ПРИВЯЗКА СОБЫТИЙ СТРАНИЦЫ ---
+// =========================================================================
+// 4. ПРИВЯЗКА СОБЫТИЙ СТРАНИЦЫ (DOM)
+// =========================================================================
 document.addEventListener('DOMContentLoaded', function() {
     var mainTextarea = document.getElementById('inputText');
     if (mainTextarea) mainTextarea.focus();
@@ -261,19 +273,22 @@ document.addEventListener('DOMContentLoaded', function() {
         clearButton.addEventListener('click', clearAll);
     }
 
-    // Массовое изменение единиц измерения
-    document.getElementById('bulkActions').addEventListener('click', function(e) {
-        var btn = e.target.closest('.bulk-unit-btn');
-        if (!btn) return;
-        var targetUnit = btn.getAttribute('data-unit');
-        for (var k = 0; k < parsedItems.length; k++) {
-            if (parsedItems[k].isValid) {
-                parsedItems[k].unit = targetUnit;
-                parsedItems[k].isDoubtful = false;
+    // Массовое изменение единиц измерения (.bulkActions)
+    var bulkBox = document.getElementById('bulkActions');
+    if (bulkBox) {
+        bulkBox.addEventListener('click', function(e) {
+            var btn = e.target.closest('.bulk-unit-btn');
+            if (!btn) return;
+            var targetUnit = btn.getAttribute('data-unit');
+            for (var k = 0; k < parsedItems.length; k++) {
+                if (parsedItems[k].isValid) {
+                    parsedItems[k].unit = targetUnit;
+                    parsedItems[k].isDoubtful = false;
+                }
             }
-        }
-        renderResults();
-    });
+            renderResults();
+        });
+    }
 
     // Подсветка текста по клику на строчку отчета
     document.getElementById('detailsList').addEventListener('click', function(e) {
@@ -302,7 +317,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // ИСПРАВЛЕНО: Авто-расчет при вставке (безопасный способ без Permission Prompt)
+    // Авто-расчет при вставке (безопасный способ без вызова Permission Prompt)
     if (mainTextarea) {
         mainTextarea.addEventListener('paste', function() {
             setTimeout(calculate, 50);
