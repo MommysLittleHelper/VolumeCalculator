@@ -1,120 +1,155 @@
+// =========================================================================
+// ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ХРАНЕНИЯ ДАННЫХ
+// =========================================================================
 var parsedItems = [];
 var textReportGlobal = '';
 
+// =========================================================================
+// 1. УПРАВЛЕНИЕ ТЕМАМИ ОФОРМЛЕНИЯ
+// =========================================================================
 function setTheme(theme) {
     var buttons = document.querySelectorAll('.theme-switch button');
-    for (var i = 0; i < buttons.length; i++) { buttons[i].classList.remove('active'); }
+    for (var i = 0; i < buttons.length; i++) {
+        buttons[i].classList.remove('active');
+    }
+    
     var activeBtn = document.getElementById('theme-' + theme);
     if (activeBtn) activeBtn.classList.add('active');
     localStorage.setItem('user-theme', theme);
-    var isDark = theme === 'system' ? window.matchMedia('(prefers-color-scheme: dark)').matches : (theme === 'dark');
+    
+    var isDark = false;
+    if (theme === 'system') {
+        isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    } else {
+        isDark = (theme === 'dark');
+    }
+    
     document.documentElement.className = isDark ? 'dark' : 'light';
 }
 
-function handleSystemThemeChange() { if (localStorage.getItem('user-theme') === 'system') setTheme('system'); }
+function handleSystemThemeChange() {
+    if (localStorage.getItem('user-theme') === 'system') setTheme('system');
+}
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', handleSystemThemeChange);
 
+// ФУНКЦИЯ ПОЛНОЙ ОЧИСТКИ ИНТЕРФЕЙСА
 function clearAll() {
     var inputText = document.getElementById('inputText');
+    var resultBox = document.getElementById('resultBox');
     if (inputText) inputText.value = '';
-    document.getElementById('resultBox').style.display = 'none';
-    parsedItems = []; textReportGlobal = '';
+    if (resultBox) resultBox.style.display = 'none';
+    parsedItems = [];
+    textReportGlobal = '';
     if (inputText) inputText.focus();
 }
 
+// =========================================================================
+// 2. ПОСТРОЧНЫЙ УМНЫЙ ПОИСК ВЕЛИЧИН (КОНВЕЙЕРНАЯ ВСЕЯДНОСТЬ)
+// =========================================================================
 function calculate() {
     var rawText = document.getElementById('inputText').value;
     if (!rawText.trim()) return alert("Введите текст");
+    
+    // Мягкая нормализация: превращаем запятые в дробных числах в точки
     var normalizedText = rawText.replace(/(\d+),(\d+)/g, '$1.$2');
     var lines = normalizedText.split('\n');
-    parsedItems = []; var itemIndex = 1; var startPosAccumulator = 0;
+    parsedItems = [];
+    
+    var itemIndex = 1;
+    var startPosAccumulator = 0;
 
     for (var i = 0; i < lines.length; i++) {
-        var line = lines[i]; var trimmedLine = line.trim(); var lineLength = line.length + 1;
-        if (!trimmedLine) { startPosAccumulator += lineLength; continue; }
-        var lowerLine = trimmedLine.toLowerCase();
+        var line = lines[i];
+        var trimmedLine = line.trim();
+        var lineLength = line.length + 1; // +1 для учета \n
         
-        lowerLine = lowerLine.replace(/(?:позиция|поз|строка|груз|коробка|короб|ящик|паллет)\s*\d+\s*[:.\-——–]?/gi, ' ');
-        lowerLine = lowerLine.replace(/№\s*\d+/g, ' ');
-        lowerLine = lowerLine.replace(/\d{2}\.\d{2}\.\d{4}/g, ' ');
-        lowerLine = lowerLine.replace(/\d+-[a-z][a-z0-9]*/g, ' ');
-        lowerLine = lowerLine.replace(/\d+\/[a-z][a-z0-9]*/g, ' ');
+        if (!trimmedLine) {
+            startPosAccumulator += lineLength;
+            continue;
+        }
 
+        var lowerLine = trimmedLine.toLowerCase();
+        // Извлекаем абсолютно все числа из текущей строки подряд
         var numbers = lowerLine.match(/\d+(\.\d+)?/g);
+        
         if (numbers && numbers.length >= 3) {
-            var quantity = 1; var hasQ = false;
-            var qMatch = lowerLine.match(/(\d+(?:\.\d+)?)\s*(?:количество|кол-во|мест|шт|штук|штуки|q)/) || 
-                         lowerLine.match(/(?:количество|кол-во|мест|шт|штук|штуки|q)\s*[:=\-——–]?\s*(\d+(?:\.\d+)?)/);
-            if (qMatch) {
-                var parsedQ = parseFloat(qMatch[1] || qMatch[2]);
-                if (!isNaN(parsedQ)) { quantity = parsedQ; hasQ = true; }
-            }
-
-            // БЕЗОПАСНО: Вытаскиваем габариты методом .shift() без использования ломающихся скобок
-            var l = parseFloat(numbers.shift());
-            var w = parseFloat(numbers.shift());
-            var h = parseFloat(numbers.shift());
-
-            if (numbers.length > 0 && !hasQ) {
-                var parsedQ4 = parseFloat(numbers.shift());
-                if (!isNaN(parsedQ4)) { quantity = parsedQ4; }
-            }
-            var unit = 'см';
-            var isDoubtful = false;
-            var msg = '';
-            var sum = l + w + h;
-            var max = Math.max(l, w, h);
-            var min = Math.min(l, w, h);
-            
-            if (/(?:^|[^а-яa-z])(мм|mm)(?:[^а-яa-z]|$)/.test(lowerLine)) {
-                unit = 'мм';
-            } else if (/(?:^|[^а-яa-z])(см|cm)(?:[^а-яa-z]|$)/.test(lowerLine)) {
-                unit = 'см';
-            } else if (/(?:^|[^а-яa-z])(м|m|метр|метров|метра|meter)(?:[^а-яa-z]|$)/.test(lowerLine)) {
-                unit = 'м';
-            } else {
-                if (sum <= 30) { 
-                    if (max > 5) { 
-                        unit = 'см'; 
-                        isDoubtful = true; 
-                        msg = '⚠️ Расчет в см, но проверьте — возможно это метры?'; 
-                    } else {
-                        unit = 'м'; 
+            // Крутим цикл, пока в строке остаются тройки чисел для габаритов
+            while (numbers.length >= 3) {
+                // Извлекаем первые три числа как длину, ширину и высоту
+                var l = parseFloat(numbers.shift());
+                var w = parseFloat(numbers.shift());
+                var h = parseFloat(numbers.shift());
+                
+                var quantity = 1;
+                
+                // Если следом идет еще одно число — проверяем, не штуки ли это
+                if (numbers.length > 0) {
+                    // Если число небольшое (меньше 500) — это явно количество мест, а не длина следующего паллета
+                    if (parseFloat(numbers[0]) < 500) {
+                        quantity = parseFloat(numbers.shift());
                     }
-                } else if (sum <= 300) { 
-                    unit = 'см'; 
-                    isDoubtful = true; 
-                    msg = '⚠️ Расчет в см, но проверьте — возможно это мм?'; 
-                } else if (sum <= 3000) {
-                    if (max >= 1000 && min >= 100) {
-                        unit = 'мм';
-                    } else if (min <= 25 || (l > 100 && w > 100 && h > 100)) { 
-                        unit = 'см'; 
-                        if (min > 25) { 
-                            isDoubtful = true; 
-                            msg = '⚠️ Расчет в см, но проверьте — возможно это мм?'; 
-                        } 
-                    } else { 
-                        unit = 'мм'; 
-                        isDoubtful = true; 
-                        msg = '⚠️ Расчет в мм, но проверьте — возможно это см?'; 
-                    }
-                } else {
-                    unit = 'мм';
                 }
-            }
 
-            parsedItems.push({
-                id: itemIndex++,
-                start: startPosAccumulator,
-                end: startPosAccumulator + line.length,
-                isValid: true,
-                l: l, w: w, h: h,
-                quantity: quantity,
-                unit: unit,
-                isDoubtful: isDoubtful,
-                msg: msg
-            });
+                // Ваша оригинальная эвристика автоматического определения единиц
+                var unit = 'см';
+                var isDoubtful = false;
+                var msg = '';
+                var sum = l + w + h;
+                var max = Math.max(l, w, h);
+                var min = Math.min(l, w, h);
+                
+                if (/(?:^|[^а-яa-z])(мм|mm)(?:[^а-яa-z]|$)/.test(lowerLine)) {
+                    unit = 'мм';
+                } else if (/(?:^|[^а-яa-z])(см|cm)(?:[^а-яa-z]|$)/.test(lowerLine)) {
+                    unit = 'см';
+                } else if (/(?:^|[^а-яa-z])(м|m|метр|метров|метра|meter)(?:[^а-яa-z]|$)/.test(lowerLine)) {
+                    unit = 'м';
+                } else {
+                    if (sum <= 30) { 
+                        if (max > 5) { 
+                            unit = 'см'; 
+                            isDoubtful = true; 
+                            msg = '⚠️ Расчет в см, но проверьте — возможно это метры?'; 
+                        } else {
+                            unit = 'м'; 
+                        }
+                    } else if (sum <= 300) { 
+                        unit = 'см'; 
+                        isDoubtful = true; 
+                        msg = '⚠️ Расчет в см, но проверьте — возможно это мм?'; 
+                    } else if (sum <= 3000) {
+                        if (max >= 1000 && min >= 100) {
+                            unit = 'мм';
+                        } else if (min <= 25 || (l > 100 && w > 100 && h > 100)) { 
+                            unit = 'см'; 
+                            if (min > 25) { 
+                                isDoubtful = true; 
+                                msg = '⚠️ Расчет в см, но проверьте — возможно это мм?'; 
+                            } 
+                        } else { 
+                            unit = 'мм'; 
+                            isDoubtful = true; 
+                            msg = '⚠️ Расчет в мм, но проверьте — возможно это см?'; 
+                        }
+                    } else {
+                        unit = 'мм';
+                    }
+                }
+
+                parsedItems.push({
+                    id: itemIndex++,
+                    start: startPosAccumulator,
+                    end: startPosAccumulator + line.length,
+                    isValid: true,
+                    l: l, 
+                    w: w, 
+                    h: h,
+                    quantity: quantity,
+                    unit: unit,
+                    isDoubtful: isDoubtful,
+                    msg: msg
+                });
+            }
         }
         startPosAccumulator += lineLength;
     }
@@ -140,8 +175,8 @@ function renderResults() {
     for (var i = 0; i < parsedItems.length; i++) {
         var item = parsedItems[i];
         if (item.isValid) {
-var div = item.unit === 'мм' ? 1000000000 : (item.unit === 'м' ? 1 : 1000000);
-var vol = (item.l * item.w * item.h * item.quantity) / div;
+            var div = item.unit === 'мм' ? 1000000000 : (item.unit === 'м' ? 1 : 1000000);
+            var vol = (item.l * item.w * item.h * item.quantity) / div;
             totalVolume += vol; 
             totalPieces += item.quantity;
             
