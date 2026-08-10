@@ -31,6 +31,7 @@ function handleSystemThemeChange() {
     if (localStorage.getItem('user-theme') === 'system') setTheme('system');
 }
 
+// Отслеживание системной темы
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', handleSystemThemeChange);
 
 // ФУНКЦИЯ ПОЛНОЙ ОЧИСТКИ ИНТЕРФЕЙСА
@@ -51,7 +52,7 @@ function calculate() {
     var rawText = document.getElementById('inputText').value;
     if (!rawText.trim()) return alert("Введите текст");
     
-    // Нормализация запятых в числах
+    // Нормализация запятых в числах (замена на точки для parseFloat)
     var normalizedText = rawText.replace(/(\d+),(\d+)/g, '$1.$2');
     var lines = normalizedText.split('\n');
     parsedItems = [];
@@ -62,7 +63,7 @@ function calculate() {
     for (var i = 0; i < lines.length; i++) {
         var line = lines[i];
         var trimmedLine = line.trim();
-        var lineLength = line.length + 1; // +1 для учета \n
+        var lineLength = line.length + 1; // +1 для учета символа переноса \n
         
         if (!trimmedLine) {
             startPosAccumulator += lineLength;
@@ -71,26 +72,26 @@ function calculate() {
 
         var lowerLine = trimmedLine.toLowerCase();
         
-        // ИСПРАВЛЕНО: Удаляем маркеры перечисления в начале строк, чтобы они не сдвигали габариты
-        lowerLine = lowerLine.replace(/(?:позиция|поз|строка|груз|коробка|короб|ящик|паллет)\s*\d+\s*[:.\-]?/g, ' ');
+        // УДАЛЕНИЕ ШУМА: Стираем слова "Позиция 1", "Груз 2" в любом регистре (флаг i)
+        lowerLine = lowerLine.replace(/(?:позиция|поз|строка|груз|коробка|короб|ящик|паллет)\s*\d+\s*[:.\-]?/gi, ' ');
         
-        // Полное удаление знаков № вместе с их цифрами
+        // Полное удаление знаков № вместе с их цифрами [2]
         lowerLine = lowerLine.replace(/№\s*\d+/g, ' ');
         
-        // Защита от дат (07.08.2026)
+        // Защита от дат (07.08.2026) [2]
         lowerLine = lowerLine.replace(/\d{2}\.\d{2}\.\d{4}/g, ' ');
         
-        // Защита от артикулов (ищет обязательные буквы после дефиса, не ломая запись 80-120-160)
+        // Защита от артикулов (ищет обязательные буквы после дефиса, не ломая запись 80-120-160) [2]
         lowerLine = lowerLine.replace(/\d+-[a-z][a-z0-9]*/g, ' ');
         lowerLine = lowerLine.replace(/\d+\/[a-z][a-z0-9]*/g, ' ');
 
-        // Ищем все числа внутри ЭТОЙ конкретной строки
+        // Ищем все числа внутри ЭТОЙ конкретной строки [2]
         var numbers = lowerLine.match(/\d+(\.\d+)?/g);
         if (numbers && numbers.length >= 3) {
             var quantity = 1;
             var hasQ = false;
 
-            // ИСПРАВЛЕНО: Более мягкий поиск маркеров количества (кушает дефисы без пробелов вроде "количество-4шт")
+            // ИСПРАВЛЕНО: Поиск количества с полной поддержкой слитного написания (количество-4шт, q=2)
             var qMatch = lowerLine.match(/(\d+(?:\.\d+)?)\s*(?:количество|кол-во|мест|шт|штук|штуки|q)/) || 
                          lowerLine.match(/(?:количество|кол-во|мест|шт|штук|штуки|q)\s*[:=\-]?\s*(\d+(?:\.\d+)?)/);
                          
@@ -102,7 +103,7 @@ function calculate() {
                     hasQ = true;
                 }
             }
-            // ИСПРАВЛЕНО: Теперь сюда приходят чистые габариты, так как номера позиций удалены в Части 1
+            // Четкая фиксация первых трех элементов массива как габаритов
             var l = parseFloat(numbers[0]);
             var w = parseFloat(numbers[1]);
             var h = parseFloat(numbers[2]);
@@ -122,7 +123,7 @@ function calculate() {
             var max = Math.max(l, w, h);
             var min = Math.min(l, w, h);
             
-            // Проверка явного указания единиц измерения в тексте строки
+            // Проверка явного указания единиц измерения в тексте строки с безопасными границами слов
             if (/(?:^|[^а-яa-z])(мм|mm)(?:[^а-яa-z]|$)/.test(lowerLine)) {
                 unit = 'мм';
             } else if (/(?:^|[^а-яa-z])(см|cm)(?:[^а-яa-z]|$)/.test(lowerLine)) {
@@ -294,7 +295,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Подсветка исходного текста по клику на строчку готового отчета
     document.getElementById('detailsList').addEventListener('click', function(e) {
         var line = e.target.closest('.detail-line');
-        if (!line || e.target.closest('.btn-badge')) return; // Пропускаем, если кликнули на кнопку смены единицы
+        if (!line || e.target.closest('.btn-badge')) return; // Пропускаем кнопки смены единиц
         
         var start = parseInt(line.getAttribute('data-start'));
         var end = parseInt(line.getAttribute('data-end'));
