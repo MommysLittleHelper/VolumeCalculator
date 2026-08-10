@@ -30,11 +30,8 @@ function setTheme(theme) {
 function handleSystemThemeChange() {
     if (localStorage.getItem('user-theme') === 'system') setTheme('system');
 }
-
-// Отслеживание системной темы
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', handleSystemThemeChange);
 
-// ФУНКЦИЯ ПОЛНОЙ ОЧИСТКИ ИНТЕРФЕЙСА
 function clearAll() {
     var inputText = document.getElementById('inputText');
     var resultBox = document.getElementById('resultBox');
@@ -52,7 +49,6 @@ function calculate() {
     var rawText = document.getElementById('inputText').value;
     if (!rawText.trim()) return alert("Введите текст");
     
-    // Нормализация запятых в числах (замена на точки для parseFloat)
     var normalizedText = rawText.replace(/(\d+),(\d+)/g, '$1.$2');
     var lines = normalizedText.split('\n');
     parsedItems = [];
@@ -63,7 +59,7 @@ function calculate() {
     for (var i = 0; i < lines.length; i++) {
         var line = lines[i];
         var trimmedLine = line.trim();
-        var lineLength = line.length + 1; // +1 для учета символа переноса \n
+        var lineLength = line.length + 1; 
         
         if (!trimmedLine) {
             startPosAccumulator += lineLength;
@@ -72,29 +68,20 @@ function calculate() {
 
         var lowerLine = trimmedLine.toLowerCase();
         
-        // УДАЛЕНИЕ ШУМА: Стираем слова "Позиция 1", "Груз 2" в любом регистре (флаг i)
+        // Очистка маркеров позиций (с флагом "i" и поддержкой всех видов тире)
         lowerLine = lowerLine.replace(/(?:позиция|поз|строка|груз|коробка|короб|ящик|паллет)\s*\d+\s*[:.\-——–]?/gi, ' ');
-        
-        // Полное удаление знаков № вместе с их цифрами [2]
         lowerLine = lowerLine.replace(/№\s*\d+/g, ' ');
-        
-        // Защита от дат (07.08.2026) [2]
         lowerLine = lowerLine.replace(/\d{2}\.\d{2}\.\d{4}/g, ' ');
-        
-        // Защита от артикулов (ищет обязательные буквы после дефиса, не ломая запись 80-120-160) [2]
         lowerLine = lowerLine.replace(/\d+-[a-z][a-z0-9]*/g, ' ');
         lowerLine = lowerLine.replace(/\d+\/[a-z][a-z0-9]*/g, ' ');
 
-        // Ищем все числа внутри ЭТОЙ конкретной строки [2]
         var numbers = lowerLine.match(/\d+(\.\d+)?/g);
         if (numbers && numbers.length >= 3) {
             var quantity = 1;
             var hasQ = false;
 
-// ИСПРАВЛЕНО: Добавлены все виды тире (дефис, среднее, длинное) для слитного написания "количество-4шт"
-var qMatch = lowerLine.match(/(\d+(?:\.\d+)?)\s*(?:количество|кол-во|мест|шт|штук|штуки|q)/) || 
-             lowerLine.match(/(?:количество|кол-во|мест|шт|штук|штуки|q)\s*[:=\-——–]?\s*(\d+(?:\.\d+)?)/);
-
+            var qMatch = lowerLine.match(/(\d+(?:\.\d+)?)\s*(?:количество|кол-во|мест|шт|штук|штуки|q)/) || 
+                         lowerLine.match(/(?:количество|кол-во|мест|шт|штук|штуки|q)\s*[:=\-——–]?\s*(\d+(?:\.\d+)?)/);
                          
             if (qMatch) {
                 var matchedValue = qMatch[1] || qMatch[2];
@@ -104,7 +91,7 @@ var qMatch = lowerLine.match(/(\d+(?:\.\d+)?)\s*(?:количество|кол-�
                     hasQ = true;
                 }
             }
-            // Извлекаем чистые габариты (длину, ширину и высоту) из массива
+            // Исправлено: строгое извлечение элементов массива по индексам
             var l = parseFloat(numbers[0]);
             var w = parseFloat(numbers[1]);
             var h = parseFloat(numbers[2]);
@@ -169,9 +156,7 @@ var qMatch = lowerLine.match(/(\d+(?:\.\d+)?)\s*(?:количество|кол-�
                 start: startPosAccumulator,
                 end: startPosAccumulator + line.length,
                 isValid: true,
-                l: l, 
-                w: w, 
-                h: h,
+                l: l, w: w, h: h,
                 quantity: quantity,
                 unit: unit,
                 isDoubtful: isDoubtful,
@@ -193,7 +178,7 @@ var qMatch = lowerLine.match(/(\d+(?:\.\d+)?)\s*(?:количество|кол-�
     
     renderResults();
 }
- // =========================================================================
+// =========================================================================
 // 3. ОТРИСОВКА РЕЗУЛЬТАТОВ НА ЭКРАН И ГЕНЕРАЦИЯ ОТЧЕТА
 // =========================================================================
 function renderResults() {
@@ -274,7 +259,6 @@ document.addEventListener('DOMContentLoaded', function() {
         clearButton.addEventListener('click', clearAll);
     }
 
-    // Массовое изменение единиц измерения (.bulkActions)
     var bulkBox = document.getElementById('bulkActions');
     if (bulkBox) {
         bulkBox.addEventListener('click', function(e) {
@@ -291,7 +275,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Подсветка исходного текста по клику на строчку готового отчета
     document.getElementById('detailsList').addEventListener('click', function(e) {
         var line = e.target.closest('.detail-line');
         if (!line || e.target.closest('.btn-badge')) return; 
@@ -305,7 +288,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Индивидуальное переключение единиц (м, см, мм) по кнопкам-бейджам
     document.getElementById('detailsList').addEventListener('click', function(e) {
         var btn = e.target.closest('.btn-badge');
         if (!btn) return;
@@ -318,11 +300,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Авто-расчет при мгновенной вставке из буфера
     if (mainTextarea) {
         mainTextarea.addEventListener('paste', function() {
             setTimeout(calculate, 50);
         });
     }
 });
-     
