@@ -31,7 +31,6 @@ function handleSystemThemeChange() {
     if (localStorage.getItem('user-theme') === 'system') setTheme('system');
 }
 
-// Современный безопасный аналог устаревшего .addListener
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', handleSystemThemeChange);
 
 // ФУНКЦИЯ ПОЛНОЙ ОЧИСТКИ ИНТЕРФЕЙСА
@@ -52,7 +51,7 @@ function calculate() {
     var rawText = document.getElementById('inputText').value;
     if (!rawText.trim()) return alert("Введите текст");
     
-    // Нормализация запятых в числах (замена на точки для parseFloat)
+    // Нормализация запятых в числах
     var normalizedText = rawText.replace(/(\d+),(\d+)/g, '$1.$2');
     var lines = normalizedText.split('\n');
     parsedItems = [];
@@ -63,7 +62,7 @@ function calculate() {
     for (var i = 0; i < lines.length; i++) {
         var line = lines[i];
         var trimmedLine = line.trim();
-        var lineLength = line.length + 1; // +1 для учета символа переноса \n
+        var lineLength = line.length + 1; // +1 для учета \n
         
         if (!trimmedLine) {
             startPosAccumulator += lineLength;
@@ -71,6 +70,9 @@ function calculate() {
         }
 
         var lowerLine = trimmedLine.toLowerCase();
+        
+        // ИСПРАВЛЕНО: Удаляем маркеры перечисления в начале строк, чтобы они не сдвигали габариты
+        lowerLine = lowerLine.replace(/(?:позиция|поз|строка|груз|коробка|короб|ящик|паллет)\s*\d+\s*[:.\-]?/g, ' ');
         
         // Полное удаление знаков № вместе с их цифрами
         lowerLine = lowerLine.replace(/№\s*\d+/g, ' ');
@@ -88,12 +90,11 @@ function calculate() {
             var quantity = 1;
             var hasQ = false;
 
-            // УЛУЧШЕНО: Поиск маркеров количества (поддержка дефисов, знаков "=" и слова "штук")
+            // ИСПРАВЛЕНО: Более мягкий поиск маркеров количества (кушает дефисы без пробелов вроде "количество-4шт")
             var qMatch = lowerLine.match(/(\d+(?:\.\d+)?)\s*(?:количество|кол-во|мест|шт|штук|штуки|q)/) || 
                          lowerLine.match(/(?:количество|кол-во|мест|шт|штук|штуки|q)\s*[:=\-]?\s*(\d+(?:\.\d+)?)/);
                          
             if (qMatch) {
-                // Извлекаем именно ту подгруппу из скобок, которая сработала (первую или вторую)
                 var matchedValue = qMatch[1] || qMatch[2];
                 var parsedQ = parseFloat(matchedValue);
                 if (!isNaN(parsedQ)) {
@@ -101,12 +102,12 @@ function calculate() {
                     hasQ = true;
                 }
             }
-            // ИСПРАВЛЕНО: Четкая фиксация первых трех элементов массива как габаритов
+            // ИСПРАВЛЕНО: Теперь сюда приходят чистые габариты, так как номера позиций удалены в Части 1
             var l = parseFloat(numbers[0]);
             var w = parseFloat(numbers[1]);
             var h = parseFloat(numbers[2]);
 
-            // Если количество не нашли текстом, но в строке есть 4-е число
+            // Если количество не нашли текстом, но в строке осталось лишнее 4-е число
             if (numbers.length >= 4 && !hasQ) {
                 var parsedQ4 = parseFloat(numbers[3]);
                 if (!isNaN(parsedQ4)) {
@@ -121,7 +122,7 @@ function calculate() {
             var max = Math.max(l, w, h);
             var min = Math.min(l, w, h);
             
-            // ИСПРАВЛЕНО: Безопасные границы слов для метров, чтобы избежать ложных срабатываний
+            // Проверка явного указания единиц измерения в тексте строки
             if (/(?:^|[^а-яa-z])(мм|mm)(?:[^а-яa-z]|$)/.test(lowerLine)) {
                 unit = 'мм';
             } else if (/(?:^|[^а-яa-z])(см|cm)(?:[^а-яa-z]|$)/.test(lowerLine)) {
@@ -129,7 +130,7 @@ function calculate() {
             } else if (/(?:^|[^а-яa-z])(м|m|метр|метров|метра|meter)(?:[^а-яa-z]|$)/.test(lowerLine)) {
                 unit = 'м';
             } else {
-                // Ваша эвристика автоматического определения, если единицы не указаны явно
+                // Ваша эвристика автоматического определения (если единицы не указаны явно)
                 if (sum <= 30) { 
                     if (max > 5) { 
                         unit = 'см'; 
@@ -290,7 +291,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Подсветка текста по клику на строчку отчета
+    // Подсветка исходного текста по клику на строчку готового отчета
     document.getElementById('detailsList').addEventListener('click', function(e) {
         var line = e.target.closest('.detail-line');
         if (!line || e.target.closest('.btn-badge')) return; // Пропускаем, если кликнули на кнопку смены единицы
@@ -304,7 +305,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // ИСПРАВЛЕНО: Индивидуальное переключение единиц (с 'data-u' на 'data-unit')
+    // Индивидуальное переключение единиц (м, см, мм) по кнопкам-бейджам
     document.getElementById('detailsList').addEventListener('click', function(e) {
         var btn = e.target.closest('.btn-badge');
         if (!btn) return;
@@ -317,7 +318,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Авто-расчет при вставке (безопасный способ без вызова Permission Prompt)
+    // Авто-расчет при мгновенной вставке из буфера
     if (mainTextarea) {
         mainTextarea.addEventListener('paste', function() {
             setTimeout(calculate, 50);
