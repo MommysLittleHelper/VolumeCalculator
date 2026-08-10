@@ -104,12 +104,12 @@ var qMatch = lowerLine.match(/(\d+(?:\.\d+)?)\s*(?:количество|кол-�
                     hasQ = true;
                 }
             }
-            // ИСПРАВЛЕНО: Четко берем 1-е, 2-е и 3-е числа из массива габаритов
+            // Извлекаем чистые габариты (длину, ширину и высоту) из массива
             var l = parseFloat(numbers[0]);
             var w = parseFloat(numbers[1]);
             var h = parseFloat(numbers[2]);
 
-            // Если количество не нашли текстом, но в строке есть 4-е число — берем строго 4-й элемент массива
+            // Если количество не нашли текстом, но в строке осталось лишнее 4-е число
             if (numbers.length >= 4 && !hasQ) {
                 var parsedQ4 = parseFloat(numbers[3]);
                 if (!isNaN(parsedQ4)) {
@@ -124,7 +124,7 @@ var qMatch = lowerLine.match(/(\d+(?:\.\d+)?)\s*(?:количество|кол-�
             var max = Math.max(l, w, h);
             var min = Math.min(l, w, h);
             
-            // Проверка явного указания единиц измерения в тексте строки с безопасными границами слов
+            // Проверка явного указания единиц измерения в тексте строки
             if (/(?:^|[^а-яa-z])(мм|mm)(?:[^а-яa-z]|$)/.test(lowerLine)) {
                 unit = 'мм';
             } else if (/(?:^|[^а-яa-z])(см|cm)(?:[^а-яa-z]|$)/.test(lowerLine)) {
@@ -132,7 +132,7 @@ var qMatch = lowerLine.match(/(\d+(?:\.\d+)?)\s*(?:количество|кол-�
             } else if (/(?:^|[^а-яa-z])(м|m|метр|метров|метра|meter)(?:[^а-яa-z]|$)/.test(lowerLine)) {
                 unit = 'м';
             } else {
-                // Ваша эвристика автоматического определения (если единицы не указаны явно)
+                // Ваша эвристика автоматического определения, если единицы не указаны явно
                 if (sum <= 30) { 
                     if (max > 5) { 
                         unit = 'см'; 
@@ -181,12 +181,10 @@ var qMatch = lowerLine.match(/(\d+(?:\.\d+)?)\s*(?:количество|кол-�
         startPosAccumulator += lineLength;
     }
 
-    // Если во всем тексте не нашлось ни одной валидной строки
     if (parsedItems.length === 0) {
         parsedItems.push({ id: 1, isValid: false, start: 0, end: rawText.length });
     }
 
-    // Показываем блок массовых операций, если успешно распознано больше 1 позиции
     var bulkBox = document.getElementById('bulkActions');
     if (bulkBox) {
         var validCount = parsedItems.filter(function(x) { return x.isValid; }).length;
@@ -195,7 +193,7 @@ var qMatch = lowerLine.match(/(\d+(?:\.\d+)?)\s*(?:количество|кол-�
     
     renderResults();
 }
-// =========================================================================
+ // =========================================================================
 // 3. ОТРИСОВКА РЕЗУЛЬТАТОВ НА ЭКРАН И ГЕНЕРАЦИЯ ОТЧЕТА
 // =========================================================================
 function renderResults() {
@@ -296,7 +294,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Подсветка исходного текста по клику на строчку готового отчета
     document.getElementById('detailsList').addEventListener('click', function(e) {
         var line = e.target.closest('.detail-line');
-        if (!line || e.target.closest('.btn-badge')) return; // Пропускаем кнопки смены единиц
+        if (!line || e.target.closest('.btn-badge')) return; 
         
         var start = parseInt(line.getAttribute('data-start'));
         var end = parseInt(line.getAttribute('data-end'));
@@ -327,3 +325,4 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+     
