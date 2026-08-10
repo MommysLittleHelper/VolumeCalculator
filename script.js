@@ -91,18 +91,18 @@ function calculate() {
                     hasQ = true;
                 }
             }
-            // Исправлено: строгое извлечение элементов массива по индексам
-            var l = parseFloat(numbers[0]);
-            var w = parseFloat(numbers[1]);
-            var h = parseFloat(numbers[2]);
+// ВОТ ТАК ЭТО ДОЛЖНО ВЫГЛЯДЕТЬ В ВАШЕМ ФАЙЛЕ:
+var l = parseFloat(numbers[0]); // Ноль в квадратных скобках
+var w = parseFloat(numbers[1]); // Единица в квадратных скобках
+var h = parseFloat(numbers[2]); // Двойка в квадратных скобках
 
-            // Если количество не нашли текстом, но в строке осталось лишнее 4-е число
-            if (numbers.length >= 4 && !hasQ) {
-                var parsedQ4 = parseFloat(numbers[3]);
-                if (!isNaN(parsedQ4)) {
-                    quantity = parsedQ4;
-                }
-            }
+// И чуть ниже, где проверяется 4-е число:
+if (numbers.length >= 4 && !hasQ) {
+    var parsedQ4 = parseFloat(numbers[3]); // Тройка в квадратных скобках
+    if (!isNaN(parsedQ4)) {
+        quantity = parsedQ4;
+    }
+}
 
             var unit = 'см';
             var isDoubtful = false;
