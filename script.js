@@ -69,8 +69,15 @@ function calculate() {
         }
 
         var lowerLine = trimmedLine.toLowerCase();
+        
+        // БЕЗОПАСНАЯ ОЧИСТКА ШУМА: стираем даты и артикулы, чтобы они не попадали в конвейер чисел
+        lowerLine = lowerLine.replace(/\d{2}\.\d{2}\.\d{4}/g, ' '); // Даты (10.08.2026)
+        lowerLine = lowerLine.replace(/\d+-[a-z][a-z0-9]*/g, ' ');   // Артикулы (445-x)
+        lowerLine = lowerLine.replace(/\d+\/[a-z][a-z0-9]*/g, ' ');   // Артикулы через дробь (551/a)
+
         // Извлекаем абсолютно все числа из текущей строки подряд
         var numbers = lowerLine.match(/\d+(\.\d+)?/g);
+
         
         if (numbers && numbers.length >= 3) {
             // Крутим цикл, пока в строке остаются тройки чисел для габаритов
