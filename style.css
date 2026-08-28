@@ -26,3 +26,6 @@ button.copy-btn{width:100%;background:none;border:1px solid var(--primary);color
 .adapter-row{font-family:inherit}
 
 .adapter-warning{margin-top:6px;font-size:12px;opacity:.9}
+
+
+.brand{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:8px}.brand-logo{width:54px;height:54px;object-fit:contain;flex:0 0 54px}.brand h1{margin-bottom:4px}.brand .subtitle{margin-bottom:0}.install-btn{width:100%;background:none;border:1px solid var(--primary);color:var(--primary);padding:10px;font-size:13px;font-weight:600;border-radius:10px;cursor:pointer;margin:0 0 15px}.install-btn:hover{background:rgba(59,130,246,.08)}

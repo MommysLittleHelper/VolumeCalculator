@@ -6,7 +6,10 @@
 <title>Логистический калькулятор</title>
 <link rel="stylesheet" href="style.css">
 <script src="script.js" defer></script>
-<link rel="manifest" href="manifest.json">
+<script src="pwa.js" defer></script>
+<link rel="manifest" href="app-manifest.json">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="apple-touch-icon" href="icon-128.png">
 </head>
 <body>
 <div class="container">
@@ -15,8 +18,13 @@
     <button id="theme-dark">🌙 Тёмная</button>
     <button id="theme-system">💻 Системная</button>
   </div>
-  <h1>📦 Логистический калькулятор</h1>
-  <p class="subtitle">Умный автовыбор и интерактивное управление</p>
+  <div class="brand">
+    <img class="brand-logo" src="icon.svg" alt="Логотип калькулятора">
+    <div>
+      <h1>Логистический калькулятор</h1>
+      <p class="subtitle">Умный автовыбор и интерактивное управление</p>
+    </div>
+  </div>
   <div id="connectionStatus" class="connection-status">● Проверка подключения…</div>
   <textarea id="inputText" placeholder="Вставьте строки сюда...&#10;Пример: 6*5*4&#10;Или: 1500 x 500 x 1000"></textarea>
   <button class="calc-btn" id="calcBtn">Рассчитать объем</button>
@@ -33,6 +41,7 @@
     <div class="details-title">🔍 Построчный разбор текста:</div>
     <div id="detailsList"></div>
   </div>
+  <button class="install-btn" id="installBtn" style="display:none;">📲 Установить как приложение</button>
   <div class="developer-credit"><em>Официальная версия • автоматическое определение габаритов груза</em></div>
 </div>
 </body>

@@ -1,5 +1,5 @@
-const CACHE = 'calc-volume-v1.3.0';
-const ASSETS = ['./','./index.html','./script.js','./style.css','./manifest.json'];
+const CACHE = 'calc-volume-v1.4.0';
+const ASSETS = ['./','./index.html','./script.js','./style.css','./app-manifest.json'];
 
 self.addEventListener('install', event => {
   event.waitUntil(
